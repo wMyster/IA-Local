@@ -22,6 +22,10 @@ def build():
         "--clean",
         "--noconfirm",
         "--add-data=static;static",
+        "--hidden-import=pystray._win32",
+        "--hidden-import=PIL",
+        "--hidden-import=PIL.Image",
+        "--hidden-import=PIL.ImageDraw",
         "launcher.py"
     ]
     

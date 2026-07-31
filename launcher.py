@@ -49,10 +49,17 @@ def create_tray_icon():
             pystray.MenuItem("❌ Sair da IA Local", on_exit)
         )
         
-        icon = pystray.Icon("IALocal", image, "IA Universal v2.0 - Ativo na Porta 8000", menu)
+        icon = pystray.Icon("IALocal", image, "IA Universal v4.0 - Ativo na Porta 8000", menu)
+        # Executar loop de eventos de interface na Thread Principal
         icon.run()
     except Exception as e:
-        print(f"[AVISO] Não foi possível iniciar o ícone da bandeja: {e}")
+        print(f"[AVISO] Ícone da bandeja indisponível: {e}")
+        # Se pystray falhar por falta de GUI, mantém o processo ativo
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            os._exit(0)
 
 def ensure_ollama_running():
     try:
@@ -81,7 +88,7 @@ def open_browser():
 
 def main_launcher():
     print("===================================================")
-    print("  INICIANDO IA LOCAL & WEB SEARCH v2.0 PARA TODOS")
+    print("  INICIANDO IA UNIVERSAL v4.0 PARA TODOS")
     print("===================================================")
     print("Servidor web em: http://localhost:8000")
     
@@ -93,11 +100,17 @@ def main_launcher():
     # 2. Abrir navegador automaticamente
     threading.Thread(target=open_browser, daemon=True).start()
 
-    # 3. Iniciar ícone na Bandeja do Sistema (Windows System Tray)
-    threading.Thread(target=create_tray_icon, daemon=True).start()
+    # 3. Iniciar Uvicorn FastAPI em thread daemon
+    server_thread = threading.Thread(
+        target=uvicorn.run,
+        args=(main.app,),
+        kwargs={"host": "127.0.0.1", "port": 8000, "log_level": "error"},
+        daemon=True
+    )
+    server_thread.start()
 
-    # 4. Iniciar servidor FastAPI na thread principal
-    uvicorn.run(main.app, host="127.0.0.1", port=8000, log_level="error")
+    # 4. Iniciar ícone da bandeja na THREAD PRINCIPAL (evita crash do Win32 event loop)
+    create_tray_icon()
 
 if __name__ == "__main__":
     main_launcher()
