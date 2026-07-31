@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IA Universal v6.0 - Ultimate Edition</title>
+    <title>IA Universal v7.0 - Masterpiece Edition</title>
     <!-- Fontes e Ícones -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,8 +32,8 @@
                         <i class="fa-solid fa-brain"></i>
                     </div>
                     <div class="brand-title">
-                        <h2>IA Universal v6.0</h2>
-                        <span class="badge-offline"><i class="fa-solid fa-fire"></i> Ultimate Edition</span>
+                        <h2>IA Universal v7.0</h2>
+                        <span class="badge-offline"><i class="fa-solid fa-gem"></i> Masterpiece</span>
                     </div>
                 </div>
                 <button id="btn-new-chat" class="btn-primary w-full">
@@ -62,8 +62,23 @@
                 </div>
             </div>
 
-            <!-- Status do Ollama e Botão de Gerenciamento de Modelos -->
+            <!-- Monitor de Hardware e Status do Ollama -->
             <div class="sidebar-footer">
+                <!-- Monitor de Recursos de Hardware em Tempo Real -->
+                <div id="hardware-monitor-card" class="hardware-card mb-12">
+                    <div class="hw-header">
+                        <span><i class="fa-solid fa-microchip"></i> Hardware do PC</span>
+                    </div>
+                    <div class="hw-item">
+                        <div class="hw-label"><span>CPU</span> <span id="hw-cpu-pct">0%</span></div>
+                        <div class="hw-bar-bg"><div id="hw-cpu-bar" class="hw-bar-fill cpu-fill" style="width: 0%;"></div></div>
+                    </div>
+                    <div class="hw-item mt-6">
+                        <div class="hw-label"><span>RAM (<span id="hw-ram-val">0 / 0 GB</span>)</span> <span id="hw-ram-pct">0%</span></div>
+                        <div class="hw-bar-bg"><div id="hw-ram-bar" class="hw-bar-fill ram-fill" style="width: 0%;"></div></div>
+                    </div>
+                </div>
+
                 <button id="btn-manage-models" class="btn-secondary w-full mb-12">
                     <i class="fa-solid fa-download"></i> Gerenciar Modelos
                 </button>
@@ -166,8 +181,8 @@
                         <div class="welcome-icon">
                             <i class="fa-solid fa-robot"></i>
                         </div>
-                        <h1>IA Universal v6.0 (Ultimate Edition)</h1>
-                        <p>Arena de Comparação Lado a Lado ⚔️, Diagramas Mermaid.js 📊, Modo Equipe 🎭, Memória Auto-Evolutiva 🧠 e Microfone 🎤!</p>
+                        <h1>IA Universal v7.0 (Masterpiece Edition)</h1>
+                        <p>Monitor de Hardware PC 📊, Arena de Modelos ⚔️, Criador de Slides HTML5 🎬, Modo Equipe 🎭 e Memória Auto-Evolutiva 🧠!</p>
                         
                         <div class="feature-cards">
                             <div class="card" onclick="document.getElementById('btn-toggle-arena').click()">
@@ -175,15 +190,15 @@
                                 <h4>Arena de Modelos Lado a Lado ⚔️</h4>
                                 <p>Compare 2 IAs ao vivo na mesma tela com métricas de velocidade paralelas.</p>
                             </div>
+                            <div class="card" onclick="useTemplate('Crie uma apresentação de slides interativa em HTML/CSS sobre Inteligência Artificial com 4 slides navegáveis por setas.')">
+                                <i class="fa-solid fa-film"></i>
+                                <h4>Criador de Slides HTML5 🎬</h4>
+                                <p>Gere apresentações de slides interativas com navegação e preview ao vivo.</p>
+                            </div>
                             <div class="card" onclick="document.getElementById('btn-toggle-multiagent').click()">
                                 <i class="fa-solid fa-users-gear"></i>
                                 <h4>Modo Equipe de IAs 🎭</h4>
                                 <p>3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) em colaboração encadeada.</p>
-                            </div>
-                            <div class="card" onclick="useTemplate('Crie um diagrama de fluxo Mermaid completo mostrando o processo de checkout de um e-commerce.')">
-                                <i class="fa-solid fa-diagram-project"></i>
-                                <h4>Diagramas Mermaid.js 📊</h4>
-                                <p>Geração gráfica instantânea de fluxogramas e mapas mentais interativos.</p>
                             </div>
                         </div>
 
@@ -192,9 +207,9 @@
                             <div class="templates-label"><i class="fa-solid fa-bolt"></i> Prompts Rápidos de Alta Produtividade:</div>
                             <div class="template-chips-container">
                                 <button class="template-chip" onclick="useTemplate('Crie uma landing page profissional completa em HTML, CSS e JS estilo dark mode.')"><i class="fa-solid fa-code"></i> Landing Page HTML/CSS</button>
+                                <button class="template-chip" onclick="useTemplate('Crie uma apresentação de slides interativa em HTML/CSS sobre Inteligência Artificial com 4 slides navegáveis.')"><i class="fa-solid fa-film"></i> Slides HTML5 Interativos</button>
                                 <button class="template-chip" onclick="useTemplate('Analise o código a seguir, encontre possíveis bugs e sugira melhorias de performance:')"><i class="fa-solid fa-bug"></i> Auditoria de Código</button>
                                 <button class="template-chip" onclick="useTemplate('Crie um resumo de estudos estruturado em tópicos e flashcards para memorização sobre:')"><i class="fa-solid fa-graduation-cap"></i> Resumo em Flashcards</button>
-                                <button class="template-chip" onclick="useTemplate('Escreva um e-mail corporativo altamente profissional e persuasivo sobre:')"><i class="fa-solid fa-envelope"></i> E-mail Profissional</button>
                             </div>
                         </div>
                     </div>
@@ -247,7 +262,7 @@
                     </button>
 
                     <!-- Textarea -->
-                    <textarea id="chat-input" placeholder="Pergunte algo, teste a Arena ⚔️, crie um diagrama Mermaid ou fale por voz (Alt+M)..." rows="1"></textarea>
+                    <textarea id="chat-input" placeholder="Pergunte algo, crie slides HTML5 🎬, teste a Arena ⚔️ ou fale por voz (Alt+M)..." rows="1"></textarea>
 
                     <!-- Botão de Enviar / Parar -->
                     <button id="btn-send" class="input-action-btn send-btn" title="Enviar Mensagem">

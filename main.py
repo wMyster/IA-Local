@@ -2,6 +2,7 @@ import json
 import time
 import re
 import httpx
+import psutil
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +17,7 @@ import web_search
 
 OLLAMA_URL = "http://localhost:11434"
 
-app = FastAPI(title="IA Universal v5.0 (Ultra Edition)", version="5.0.0")
+app = FastAPI(title="IA Universal v7.0 (Masterpiece Edition)", version="7.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -76,6 +77,24 @@ async def get_status():
     except Exception:
         pass
     return {"status": "offline", "version": None, "url": OLLAMA_URL}
+
+# --- MONITOR DE RECURSOS DE HARDWARE EM TEMPO REAL (v7.0) ---
+@app.get("/api/hardware")
+def get_hardware_stats():
+    try:
+        cpu_pct = psutil.cpu_percent(interval=None)
+        ram = psutil.virtual_memory()
+        ram_used_gb = round(ram.used / (1024 ** 3), 1)
+        ram_total_gb = round(ram.total / (1024 ** 3), 1)
+        
+        return {
+            "cpu_percent": cpu_pct,
+            "ram_percent": ram.percent,
+            "ram_used_gb": ram_used_gb,
+            "ram_total_gb": ram_total_gb
+        }
+    except Exception as e:
+        return {"cpu_percent": 0, "ram_percent": 0, "ram_used_gb": 0, "ram_total_gb": 0}
 
 @app.get("/api/models")
 async def list_models():

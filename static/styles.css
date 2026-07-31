@@ -122,7 +122,7 @@ body {
 
 .badge-offline {
     font-size: 11px;
-    color: #f59e0b;
+    color: #ec4899;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -179,7 +179,63 @@ body {
     border-color: var(--accent-primary);
 }
 
-/* ARENA DE MODELOS (v6.0) */
+/* MONITOR DE HARDWARE CARD (v7.0) */
+.hardware-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.hw-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.hw-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hw-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.hw-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.hw-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.cpu-fill {
+    background: linear-gradient(90deg, #38bdf8 0%, #6366f1 100%);
+}
+
+.ram-fill {
+    background: linear-gradient(90deg, #a855f7 0%, #ec4899 100%);
+}
+
+.mt-6 { margin-top: 6px; }
+
+/* ARENA DE MODELOS */
 .arena-top-btn.active {
     background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%) !important;
     color: #ffffff !important;
@@ -219,7 +275,6 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-
 }
 
 .arena-header-badge.badge-a {

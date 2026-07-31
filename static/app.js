@@ -38,7 +38,27 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMemoriesCount();
     initTheme();
     loadSavedSettings();
+    startHardwareMonitor();
 });
+
+function startHardwareMonitor() {
+    updateHardwareStats();
+    setInterval(updateHardwareStats, 3000);
+}
+
+async function updateHardwareStats() {
+    try {
+        const res = await fetch('/api/hardware');
+        const data = await res.json();
+        
+        document.getElementById('hw-cpu-pct').innerText = `${data.cpu_percent}%`;
+        document.getElementById('hw-cpu-bar').style.width = `${data.cpu_percent}%`;
+
+        document.getElementById('hw-ram-pct').innerText = `${data.ram_percent}%`;
+        document.getElementById('hw-ram-val').innerText = `${data.ram_used_gb} / ${data.ram_total_gb} GB`;
+        document.getElementById('hw-ram-bar').style.width = `${data.ram_percent}%`;
+    } catch (e) {}
+}
 
 function initMermaid() {
     if (window.mermaid) {
@@ -783,8 +803,8 @@ function renderWelcomeScreen() {
             <div class="welcome-icon">
                 <i class="fa-solid fa-robot"></i>
             </div>
-            <h1>IA Universal v6.0 (Ultimate Edition)</h1>
-            <p>Arena de Comparação Lado a Lado ⚔️, Diagramas Mermaid.js 📊, Modo Equipe 🎭, Memória Auto-Evolutiva 🧠 e Microfone 🎤!</p>
+            <h1>IA Universal v7.0 (Masterpiece Edition)</h1>
+            <p>Monitor de Hardware PC 📊, Arena de Modelos ⚔️, Criador de Slides HTML5 🎬, Modo Equipe 🎭 e Memória Auto-Evolutiva 🧠!</p>
             
             <div class="feature-cards">
                 <div class="card" onclick="document.getElementById('btn-toggle-arena').click()">
@@ -792,15 +812,15 @@ function renderWelcomeScreen() {
                     <h4>Arena de Modelos Lado a Lado ⚔️</h4>
                     <p>Compare 2 IAs ao vivo na mesma tela com métricas de velocidade paralelas.</p>
                 </div>
+                <div class="card" onclick="useTemplate('Crie uma apresentação de slides interativa em HTML/CSS sobre Inteligência Artificial com 4 slides navegáveis por setas.')">
+                    <i class="fa-solid fa-film"></i>
+                    <h4>Criador de Slides HTML5 🎬</h4>
+                    <p>Gere apresentações de slides interativas com navegação e preview ao vivo.</p>
+                </div>
                 <div class="card" onclick="document.getElementById('btn-toggle-multiagent').click()">
                     <i class="fa-solid fa-users-gear"></i>
                     <h4>Modo Equipe de IAs 🎭</h4>
                     <p>3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) em colaboração encadeada.</p>
-                </div>
-                <div class="card" onclick="useTemplate('Crie um diagrama de fluxo Mermaid completo mostrando o processo de checkout de um e-commerce.')">
-                    <i class="fa-solid fa-diagram-project"></i>
-                    <h4>Diagramas Mermaid.js 📊</h4>
-                    <p>Geração gráfica instantânea de fluxogramas e mapas mentais interativos.</p>
                 </div>
             </div>
 
@@ -808,9 +828,9 @@ function renderWelcomeScreen() {
                 <div class="templates-label"><i class="fa-solid fa-bolt"></i> Prompts Rápidos de Alta Produtividade:</div>
                 <div class="template-chips-container">
                     <button class="template-chip" onclick="useTemplate('Crie uma landing page profissional completa em HTML, CSS e JS estilo dark mode.')"><i class="fa-solid fa-code"></i> Landing Page HTML/CSS</button>
+                    <button class="template-chip" onclick="useTemplate('Crie uma apresentação de slides interativa em HTML/CSS sobre Inteligência Artificial com 4 slides navegáveis.')"><i class="fa-solid fa-film"></i> Slides HTML5 Interativos</button>
                     <button class="template-chip" onclick="useTemplate('Analise o código a seguir, encontre possíveis bugs e sugira melhorias de performance:')"><i class="fa-solid fa-bug"></i> Auditoria de Código</button>
                     <button class="template-chip" onclick="useTemplate('Crie um resumo de estudos estruturado em tópicos e flashcards para memorização sobre:')"><i class="fa-solid fa-graduation-cap"></i> Resumo em Flashcards</button>
-                    <button class="template-chip" onclick="useTemplate('Escreva um e-mail corporativo altamente profissional e persuasivo sobre:')"><i class="fa-solid fa-envelope"></i> E-mail Profissional</button>
                 </div>
             </div>
         </div>
@@ -1295,7 +1315,7 @@ async function streamArenaModels(prompt, rawImages) {
 function renderMermaidDiagrams(container) {
     if (!window.mermaid) return;
 
-    container.querySelectorAll('pre code.language-mermaid').forEach((block, idx) => {
+    container.querySelectorAll('pre code.language-mermaid').forEach((block) => {
         const parent = block.parentElement;
         if (parent.dataset.renderedMermaid) return;
 
