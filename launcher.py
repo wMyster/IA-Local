@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import socket
 import threading
 import webbrowser
 import subprocess
@@ -21,21 +22,39 @@ import main
 
 OLLAMA_URL = "http://localhost:11434"
 
-def create_tray_icon():
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('127.0.0.1', port)) == 0
+
+def find_available_port(start_port: int = 8000) -> int:
+    for port in range(start_port, start_port + 50):
+        if not is_port_in_use(port):
+            return port
+    return start_port
+
+def is_our_app_running(port: int = 8000) -> bool:
+    try:
+        resp = httpx.get(f"http://localhost:{port}/api/status", timeout=1.0)
+        if resp.status_code == 200:
+            return True
+    except Exception:
+        pass
+    return False
+
+def create_tray_icon(port: int):
     try:
         import pystray
         
-        # Gerar um ícone de 64x64 com degradê roxo/azul para a bandeja do Windows
         image = Image.new('RGBA', (64, 64), color=(0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
         draw.ellipse((8, 8, 56, 56), fill=(99, 102, 241, 255), outline=(168, 85, 247, 255), width=3)
         draw.ellipse((20, 20, 44, 44), fill=(255, 255, 255, 255))
         
         def on_open_browser(icon, item):
-            webbrowser.open("http://localhost:8000")
+            webbrowser.open(f"http://localhost:{port}")
             
         def on_check_status(icon, item):
-            webbrowser.open("http://localhost:8000/api/status")
+            webbrowser.open(f"http://localhost:{port}/api/status")
 
         def on_exit(icon, item):
             print("[INFO] Encerrando IA Local...")
@@ -49,12 +68,10 @@ def create_tray_icon():
             pystray.MenuItem("❌ Sair da IA Local", on_exit)
         )
         
-        icon = pystray.Icon("IALocal", image, "IA Universal v4.0 - Ativo na Porta 8000", menu)
-        # Executar loop de eventos de interface na Thread Principal
+        icon = pystray.Icon("IALocal", image, f"IA Universal - Porta {port}", menu)
         icon.run()
     except Exception as e:
         print(f"[AVISO] Ícone da bandeja indisponível: {e}")
-        # Se pystray falhar por falta de GUI, mantém o processo ativo
         try:
             while True:
                 time.sleep(1)
@@ -82,35 +99,44 @@ def ensure_ollama_running():
         except Exception as e:
             print(f"[ERRO] Falha ao iniciar Ollama: {e}")
 
-def open_browser():
-    time.sleep(1.8)
-    webbrowser.open("http://localhost:8000")
+def open_browser(port: int):
+    time.sleep(1.5)
+    webbrowser.open(f"http://localhost:{port}")
 
 def main_launcher():
     print("===================================================")
     print("  INICIANDO IA UNIVERSAL v4.0 PARA TODOS")
     print("===================================================")
-    print("Servidor web em: http://localhost:8000")
+    
+    # 1. Se a nossa aplicação já estiver rodando na porta 8000, apenas abre o navegador
+    if is_our_app_running(8000):
+        print("[INFO] IA Local já está rodando na porta 8000! Abrindo o navegador...")
+        webbrowser.open("http://localhost:8000")
+        return
+
+    # 2. Selecionar uma porta livre disponível (8000, 8001, 8002...)
+    port = find_available_port(8000)
+    print(f"Servidor web ativo na porta: http://localhost:{port}")
     
     db.init_db()
     
-    # 1. Garantir que Ollama está ativo
+    # 3. Garantir que Ollama está ativo em segundo plano
     threading.Thread(target=ensure_ollama_running, daemon=True).start()
 
-    # 2. Abrir navegador automaticamente
-    threading.Thread(target=open_browser, daemon=True).start()
+    # 4. Abrir navegador na porta atribuída
+    threading.Thread(target=open_browser, args=(port,), daemon=True).start()
 
-    # 3. Iniciar Uvicorn FastAPI em thread daemon
+    # 5. Iniciar Uvicorn na porta selecionada
     server_thread = threading.Thread(
         target=uvicorn.run,
         args=(main.app,),
-        kwargs={"host": "127.0.0.1", "port": 8000, "log_level": "error"},
+        kwargs={"host": "127.0.0.1", "port": port, "log_level": "error"},
         daemon=True
     )
     server_thread.start()
 
-    # 4. Iniciar ícone da bandeja na THREAD PRINCIPAL (evita crash do Win32 event loop)
-    create_tray_icon()
+    # 6. Iniciar ícone da bandeja do Windows na Thread Principal
+    create_tray_icon(port)
 
 if __name__ == "__main__":
     main_launcher()
