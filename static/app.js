@@ -6,6 +6,7 @@ let isStreaming = false;
 let activeAbortController = null;
 let isSpeaking = false;
 let isWebSearchEnabled = false;
+let isMultiAgentEnabled = false;
 let currentUtterance = null;
 let allConversations = [];
 let selectedBase64Images = [];
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkOllamaStatus();
     loadAvailableModels();
     loadConversationsList();
+    loadMemoriesCount();
     initTheme();
     loadSavedSettings();
 });
@@ -58,24 +60,17 @@ function updateThemeIcon(theme) {
 // ATALHOS DE TECLADO
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-        // Ctrl + N -> Novo Chat
         if (e.ctrlKey && e.key.toLowerCase() === 'n') {
             e.preventDefault();
             createNewChat();
-        }
-        // Ctrl + K -> Foco na Pesquisa
-        else if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+        } else if (e.ctrlKey && e.key.toLowerCase() === 'k') {
             e.preventDefault();
             const searchInput = document.getElementById('history-search-input');
             if (searchInput) searchInput.focus();
-        }
-        // Alt + M -> Microfone (Entrada por Voz)
-        else if (e.altKey && e.key.toLowerCase() === 'm') {
+        } else if (e.altKey && e.key.toLowerCase() === 'm') {
             e.preventDefault();
             toggleSpeechRecognition();
-        }
-        // Esc -> Fechar Modais
-        else if (e.key === 'Escape') {
+        } else if (e.key === 'Escape') {
             closeAllModals();
         }
     });
@@ -162,20 +157,40 @@ function setupEventListeners() {
         updateThemeIcon(newTheme);
     });
 
+    // Toggle Modo Equipe de IAs (Multi-Agent)
+    const multiBtn = document.getElementById('btn-toggle-multiagent');
+    const multiIndicator = document.getElementById('multiagent-status-indicator');
+    multiBtn.addEventListener('click', () => {
+        isMultiAgentEnabled = !isMultiAgentEnabled;
+        multiBtn.classList.toggle('active', isMultiAgentEnabled);
+        if (isMultiAgentEnabled) {
+            multiIndicator.className = 'active';
+            multiIndicator.innerHTML = '<i class="fa-solid fa-users-gear"></i> 🎭 Modo Equipe de IAs Ativado (Pesquisa ➔ Criação ➔ Revisão)';
+        } else {
+            multiIndicator.className = 'text-muted';
+            multiIndicator.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado';
+        }
+    });
+
     // Toggle Pesquisa Web
     const webBtn = document.getElementById('btn-toggle-web');
-    const webIndicator = document.getElementById('web-search-indicator');
     webBtn.addEventListener('click', () => {
         isWebSearchEnabled = !isWebSearchEnabled;
         webBtn.classList.toggle('active', isWebSearchEnabled);
         if (isWebSearchEnabled) {
-            webIndicator.className = 'active';
-            webIndicator.innerHTML = '<i class="fa-solid fa-globe"></i> 🌐 Live Web Scraper Ativado (Tempo Real)';
-        } else {
-            webIndicator.className = 'text-muted';
-            webIndicator.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado';
+            multiIndicator.className = 'active';
+            multiIndicator.innerHTML = '<i class="fa-solid fa-globe"></i> 🌐 Live Web Scraper Ativado (Tempo Real)';
+        } else if (!isMultiAgentEnabled) {
+            multiIndicator.className = 'text-muted';
+            multiIndicator.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado';
         }
     });
+
+    // Gerenciador de Memória Pessoal Modal
+    document.getElementById('btn-open-memories').addEventListener('click', openMemoryModal);
+    document.getElementById('btn-open-memories-sidebar').addEventListener('click', openMemoryModal);
+    document.getElementById('btn-close-memory-modal').addEventListener('click', closeMemoryModal);
+    document.getElementById('btn-add-memory').addEventListener('click', saveNewMemory);
 
     document.getElementById('history-search-input').addEventListener('input', (e) => {
         filterConversations(e.target.value);
@@ -185,19 +200,6 @@ function setupEventListeners() {
         selectedModel = e.target.value;
         if (currentConversationId) {
             updateConversationMeta({ model: selectedModel });
-        }
-    });
-
-    document.getElementById('select-persona').addEventListener('change', (e) => {
-        const val = e.target.value;
-        if (val === 'custom') {
-            openPromptModal();
-        } else if (PERSONAS[val]) {
-            currentSystemPrompt = PERSONAS[val];
-            document.getElementById('modal-system-prompt').value = currentSystemPrompt;
-            if (currentConversationId) {
-                updateConversationMeta({ system_prompt: currentSystemPrompt });
-            }
         }
     });
 
@@ -226,16 +228,6 @@ function setupEventListeners() {
         document.getElementById('code-preview-modal').classList.add('hidden');
     });
 
-    document.getElementById('btn-edit-prompt').addEventListener('click', openPromptModal);
-    document.getElementById('btn-close-modal').addEventListener('click', closePromptModal);
-    document.getElementById('btn-save-prompt').addEventListener('click', () => {
-        currentSystemPrompt = document.getElementById('modal-system-prompt').value;
-        if (currentConversationId) {
-            updateConversationMeta({ system_prompt: currentSystemPrompt });
-        }
-        closePromptModal();
-    });
-
     document.getElementById('btn-manage-models').addEventListener('click', openModelsModal);
     document.getElementById('btn-close-models-modal').addEventListener('click', closeModelsModal);
     document.getElementById('btn-start-pull').addEventListener('click', startModelPull);
@@ -248,13 +240,13 @@ function setupEventListeners() {
     });
     document.addEventListener('click', () => exportMenu.classList.add('hidden'));
 
-    // Upload de Imagens (Visão)
+    // Upload de Imagens
     document.getElementById('btn-image-upload').addEventListener('click', () => {
         document.getElementById('image-upload-input').click();
     });
     document.getElementById('image-upload-input').addEventListener('change', handleImageUpload);
 
-    // Upload de Documentos (RAG)
+    // Upload de Documentos
     document.getElementById('btn-upload').addEventListener('click', () => {
         document.getElementById('file-upload-input').click();
     });
@@ -275,6 +267,91 @@ function setupEventListeners() {
     });
 
     document.getElementById('btn-refresh-status').addEventListener('click', checkOllamaStatus);
+}
+
+// MEMÓRIA DE LONGO PRAZO (v5.0)
+async function loadMemoriesCount() {
+    try {
+        const res = await fetch('/api/memories');
+        const list = await res.json();
+        document.getElementById('memory-count-badge').innerText = list.length;
+    } catch (e) {}
+}
+
+async function openMemoryModal() {
+    document.getElementById('memory-modal').classList.remove('hidden');
+    await renderMemoriesList();
+}
+
+function closeMemoryModal() {
+    document.getElementById('memory-modal').classList.add('hidden');
+}
+
+async function renderMemoriesList() {
+    const container = document.getElementById('memories-list');
+    container.innerHTML = 'Carregando memórias...';
+
+    try {
+        const res = await fetch('/api/memories');
+        const list = await res.json();
+        container.innerHTML = '';
+
+        document.getElementById('memory-count-badge').innerText = list.length;
+
+        if (!list || list.length === 0) {
+            container.innerHTML = '<div class="text-muted" style="padding: 10px;">Nenhuma memória registrada ainda. Diga "Lembre-se que..." no chat para salvar!</div>';
+            return;
+        }
+
+        list.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'memory-item';
+            item.innerHTML = `
+                <div>
+                    <span class="memory-cat-badge">${escapeHtml(m.category)}</span>
+                    <strong style="margin-left: 6px;">${escapeHtml(m.memory_key)}:</strong> ${escapeHtml(m.memory_value)}
+                </div>
+                <button class="delete-model-btn" onclick="deleteMemory('${m.id}')" title="Excluir Memória"><i class="fa-solid fa-trash"></i></button>
+            `;
+            container.appendChild(item);
+        });
+    } catch (e) {
+        container.innerHTML = 'Erro ao carregar memórias.';
+    }
+}
+
+async function saveNewMemory() {
+    const keyInput = document.getElementById('new-mem-key');
+    const valInput = document.getElementById('new-mem-val');
+
+    const key = keyInput.value.trim();
+    const val = valInput.value.trim();
+    if (!key || !val) {
+        alert('Preencha a chave e o valor da memória.');
+        return;
+    }
+
+    try {
+        await fetch('/api/memories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ memory_key: key, memory_value: val, category: "Manual" })
+        });
+        keyInput.value = '';
+        valInput.value = '';
+        await renderMemoriesList();
+    } catch (e) {
+        alert('Erro ao salvar memória.');
+    }
+}
+
+async function deleteMemory(memId) {
+    try {
+        await fetch(`/api/memories/${memId}`, { method: 'DELETE' });
+        await renderMemoriesList();
+    } catch (e) {
+        alert('Erro ao excluir memória.');
+    }
 }
 
 // ABAS DE CHAT SIMULTÂNEAS
@@ -643,24 +720,24 @@ function renderWelcomeScreen() {
             <div class="welcome-icon">
                 <i class="fa-solid fa-robot"></i>
             </div>
-            <h1>IA Universal v4.0 (Super Edition)</h1>
-            <p>100% Gratuita, código aberto. Entrada por Voz (Microfone 🎤), Abas Simultâneas, Leitor de PDFs e Live Web Scraper!</p>
+            <h1>IA Universal v5.0 (Ultra Edition)</h1>
+            <p>Diferenciador único: Modo Equipe de IAs (3 Agentes), Memória Auto-Evolutiva de Longo Prazo, Microfone 🎤 e Live Web Scraper!</p>
             
             <div class="feature-cards">
+                <div class="card" onclick="document.getElementById('btn-toggle-multiagent').click()">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <h4>Modo Equipe de IAs 🎭</h4>
+                    <p>3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) colaborando para criar a resposta perfeita.</p>
+                </div>
+                <div class="card" onclick="document.getElementById('btn-open-memories').click()">
+                    <i class="fa-solid fa-brain"></i>
+                    <h4>Memória Auto-Evolutiva 🧠</h4>
+                    <p>A IA aprende seu perfil, regras e preferências e lembra em todas as futuras conversas.</p>
+                </div>
                 <div class="card" onclick="document.getElementById('btn-mic').click()">
                     <i class="fa-solid fa-microphone"></i>
                     <h4>Entrada por Voz (Microfone)</h4>
-                    <p>Clique no microfone ou pressione Alt+M para falar sua pergunta.</p>
-                </div>
-                <div class="card" onclick="document.getElementById('btn-add-tab').click()">
-                    <i class="fa-solid fa-layer-group"></i>
-                    <h4>Abas de Chat Simultâneas</h4>
-                    <p>Abra múltiplos chats paralelos e navegue sem perder o contexto.</p>
-                </div>
-                <div class="card" onclick="document.getElementById('btn-upload').click()">
-                    <i class="fa-solid fa-file-pdf"></i>
-                    <h4>Resumo de PDFs & Leitor Lado a Lado</h4>
-                    <p>Anexe um PDF para resumir com 1 clique e ler o texto em painel lateral.</p>
+                    <p>Fale sua pergunta usando a voz via atalho Alt+M.</p>
                 </div>
             </div>
         </div>
@@ -682,7 +759,6 @@ async function loadConversation(convId) {
         document.getElementById('current-chat-title').innerText = data.conversation.title;
         if (data.conversation.system_prompt) {
             currentSystemPrompt = data.conversation.system_prompt;
-            document.getElementById('modal-system-prompt').value = currentSystemPrompt;
         }
 
         addTab(convId, data.conversation.title);
@@ -712,7 +788,6 @@ async function deleteConv(event, convId) {
 
     try {
         await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
-        
         removeTab(convId, null);
         await loadConversationsList();
     } catch (err) {
@@ -725,7 +800,7 @@ function exportCurrentChat(format) {
     window.location.href = `/api/conversations/${currentConversationId}/export?format=${format}`;
 }
 
-// UPLOAD DE DOCUMENTOS & RESUMO EM 1 CLIQUE (RAG)
+// UPLOAD DE DOCUMENTOS & RAG
 async function handleFileUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -977,6 +1052,7 @@ async function sendMessage() {
                 model: selectedModel,
                 system_prompt: currentSystemPrompt,
                 web_search: isWebSearchEnabled,
+                multi_agent: isMultiAgentEnabled,
                 images: rawImages.length > 0 ? rawImages : null,
                 options: getAiOptions()
             }),
@@ -1038,6 +1114,7 @@ async function sendMessage() {
         activeAbortController = null;
         updateSendButtonUI(false);
         loadConversationsList();
+        loadMemoriesCount();
     }
 }
 
@@ -1107,24 +1184,9 @@ function toggleSpeech(btn) {
     btn.innerHTML = '<i class="fa-solid fa-square"></i> Parar';
 }
 
-function setInputPrompt(text) {
-    const input = document.getElementById('chat-input');
-    input.value = text;
-    input.focus();
-}
-
 function scrollToBottom() {
     const viewport = document.querySelector('.chat-viewport');
     viewport.scrollTop = viewport.scrollHeight;
-}
-
-function openPromptModal() {
-    document.getElementById('prompt-modal').classList.remove('hidden');
-    document.getElementById('modal-system-prompt').value = currentSystemPrompt;
-}
-
-function closePromptModal() {
-    document.getElementById('prompt-modal').classList.add('hidden');
 }
 
 function escapeHtml(str) {

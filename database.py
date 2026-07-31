@@ -52,6 +52,17 @@ def init_db():
                 FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE
             )
         """)
+        
+        # Tabela de Memória de Longo Prazo Auto-Evolutiva (v5.0)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_memories (
+                id TEXT PRIMARY KEY,
+                category TEXT DEFAULT 'Preferência',
+                memory_key TEXT NOT NULL,
+                memory_value TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
 
 def create_conversation(title: str = "Nova Conversa", system_prompt: str = "", model: str = "") -> Dict[str, Any]:
@@ -174,4 +185,29 @@ def delete_document_record(doc_id: str):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+        conn.commit()
+
+# --- MEMÓRIA DE LONGO PRAZO AUTO-EVOLUTIVA (v5.0) ---
+def add_memory(memory_key: str, memory_value: str, category: str = "Preferência") -> Dict[str, Any]:
+    mem_id = str(uuid.uuid4())
+    now = datetime.now().isoformat()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO user_memories (id, category, memory_key, memory_value, created_at) VALUES (?, ?, ?, ?, ?)",
+            (mem_id, category, memory_key, memory_value, now)
+        )
+        conn.commit()
+    return {"id": mem_id, "category": category, "memory_key": memory_key, "memory_value": memory_value, "created_at": now}
+
+def get_all_memories() -> List[Dict[str, Any]]:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM user_memories ORDER BY created_at DESC")
+        return [dict(r) for r in cursor.fetchall()]
+
+def delete_memory(memory_id: str):
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM user_memories WHERE id = ?", (memory_id,))
         conn.commit()

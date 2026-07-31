@@ -1,5 +1,6 @@
 import json
 import time
+import re
 import httpx
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import StreamingResponse, FileResponse, Response
@@ -15,7 +16,7 @@ import web_search
 
 OLLAMA_URL = "http://localhost:11434"
 
-app = FastAPI(title="IA Universal v4.0 (Super Edition)", version="4.0.0")
+app = FastAPI(title="IA Universal v5.0 (Ultra Edition)", version="5.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,12 +41,18 @@ class ConversationUpdate(BaseModel):
     system_prompt: Optional[str] = None
     model: Optional[str] = None
 
+class MemoryCreate(BaseModel):
+    memory_key: str
+    memory_value: str
+    category: Optional[str] = "Preferência"
+
 class ChatRequest(BaseModel):
     conversation_id: str
     prompt: str
     model: str
     system_prompt: Optional[str] = None
     web_search: Optional[bool] = False
+    multi_agent: Optional[bool] = False
     images: Optional[List[str]] = None
     options: Optional[Dict[str, Any]] = None
 
@@ -108,7 +115,6 @@ async def pull_model(request: PullModelRequest):
                                     total = data.get("total", 0)
                                     percent = round((completed / total) * 100, 1) if total > 0 else 0
                                     status_str = data.get("status", "")
-                                    
                                     yield f"data: {json.dumps({'status': status_str, 'percent': percent, 'completed': completed, 'total': total})}\n\n"
                                 except Exception:
                                     pass
@@ -159,21 +165,33 @@ def delete_conversation(conv_id: str):
     db.delete_conversation(conv_id)
     return {"status": "success"}
 
-# Exportação de Conversas (PDF, MD, JSON)
+# --- MEMÓRIA DE LONGO PRAZO AUTO-EVOLUTIVA (v5.0) ---
+@app.get("/api/memories")
+def list_memories():
+    return db.get_all_memories()
+
+@app.post("/api/memories")
+def create_memory(data: MemoryCreate):
+    return db.add_memory(memory_key=data.memory_key, memory_value=data.memory_value, category=data.category)
+
+@app.delete("/api/memories/{mem_id}")
+def remove_memory(mem_id: str):
+    db.delete_memory(mem_id)
+    return {"status": "success"}
+
+# Exportação de Conversas
 @app.get("/api/conversations/{conv_id}/export")
 def export_conversation(conv_id: str, format: str = Query("md")):
     conv = db.get_conversation(conv_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversa não encontrada")
     messages = db.get_messages(conv_id)
-    
     title = conv.get("title", "Conversa")
     safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-')).strip()
     
     if format == "json":
         data_str = json.dumps({"conversation": conv, "messages": messages}, indent=2, ensure_ascii=False)
         return Response(content=data_str, media_type="application/json", headers={"Content-Disposition": f'attachment; filename="{safe_title}.json"'})
-        
     elif format == "pdf":
         pdf = FPDF()
         pdf.add_page()
@@ -182,7 +200,6 @@ def export_conversation(conv_id: str, format: str = Query("md")):
         pdf.set_font("Helvetica", "I", 10)
         pdf.cell(0, 8, f"Criado em: {conv.get('created_at', '')}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)
-        
         for msg in messages:
             role_title = "USUARIO" if msg["role"] == "user" else "ASSISTENTE (IA)"
             pdf.set_font("Helvetica", "B", 11)
@@ -191,11 +208,8 @@ def export_conversation(conv_id: str, format: str = Query("md")):
             clean_content = msg["content"].encode("latin-1", errors="replace").decode("latin-1")
             pdf.multi_cell(0, 6, clean_content)
             pdf.ln(4)
-            
-        pdf_bytes = pdf.output()
-        return Response(content=bytes(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{safe_title}.pdf"'})
-        
-    else:  # md (default)
+        return Response(content=bytes(pdf.output()), media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{safe_title}.pdf"'})
+    else:
         md_text = f"# Conversa: {title}\n*Criado em: {conv.get('created_at', '')}*\n\n---\n\n"
         for msg in messages:
             role_name = "👤 **Usuário**" if msg["role"] == "user" else "🤖 **Assistente IA**"
@@ -208,16 +222,12 @@ async def upload_document(conv_id: str, file: UploadFile = File(...)):
     conv = db.get_conversation(conv_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversa não encontrada")
-        
     file_bytes = await file.read()
     filename = file.filename
     file_type = filename.split('.')[-1].lower() if '.' in filename else 'txt'
-    
     doc_id = str(db.uuid.uuid4())
     chunk_count = rag.index_document(conv_id, doc_id, filename, file_bytes)
-    
-    doc_record = db.add_document_record(conv_id, filename, file_type, chunk_count)
-    return doc_record
+    return db.add_document_record(conv_id, filename, file_type, chunk_count)
 
 @app.get("/api/conversations/{conv_id}/documents")
 def get_attached_documents(conv_id: str):
@@ -225,8 +235,7 @@ def get_attached_documents(conv_id: str):
 
 @app.get("/api/conversations/{conv_id}/documents/{doc_id}/text")
 def get_attached_document_text(conv_id: str, doc_id: str):
-    text = rag.get_document_full_text(conv_id, doc_id)
-    return {"text": text}
+    return {"text": rag.get_document_full_text(conv_id, doc_id)}
 
 @app.delete("/api/conversations/{conv_id}/documents/{doc_id}")
 def delete_attached_document(conv_id: str, doc_id: str):
@@ -234,7 +243,7 @@ def delete_attached_document(conv_id: str, doc_id: str):
     db.delete_document_record(doc_id)
     return {"status": "success"}
 
-# Chat Streaming SSE com RAG, Live Web Scraper, Visão Multimodal e Parâmetros
+# Chat Streaming SSE com Modo Equipe de IAs (Multi-Agent), Memória de Longo Prazo e RAG
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest):
     conv_id = request.conversation_id
@@ -245,11 +254,23 @@ async def chat_stream(request: ChatRequest):
         raise HTTPException(status_code=400, detail="O prompt ou imagem é obrigatório.")
         
     db.add_message(conv_id, role="user", content=prompt)
-
     conv = db.get_conversation(conv_id)
-    sys_prompt = request.system_prompt or (conv["system_prompt"] if conv else "")
+    base_sys_prompt = request.system_prompt or (conv["system_prompt"] if conv else "")
     
-    # 1. RAG de Documentos
+    # Auto-Detecção de Nova Memória a partir do Prompt
+    if "lembre-se que" in prompt.lower() or "minha preferência é" in prompt.lower():
+        mem_val = prompt
+        db.add_memory(memory_key="Preferencia_Usuario", memory_value=mem_val, category="Perfil")
+
+    # Injeção da Memória de Longo Prazo no System Prompt
+    user_memories = db.get_all_memories()
+    memory_context = ""
+    if user_memories:
+        memory_context = "\n\n=== MEMÓRIA DE LONGO PRAZO APRENDIDA DO USUÁRIO ===\n"
+        for m in user_memories:
+            memory_context += f"- [{m['category']}] {m['memory_key']}: {m['memory_value']}\n"
+
+    # RAG de Documentos
     relevant_chunks = rag.search_relevant_chunks(conv_id, prompt, top_k=4)
     sources = []
     context_str = ""
@@ -265,7 +286,7 @@ async def chat_stream(request: ChatRequest):
             })
             context_str += f"--- Documento [{chunk['filename']}] (Trecho {i}) ---\n{chunk['text']}\n\n"
 
-    # 2. Pesquisa Web e Live Web Scraper (tempo real)
+    # Live Web Scraper
     web_sources = []
     if request.web_search and prompt:
         search_results = web_search.search_web(prompt, max_results=3, deep_scrape=True)
@@ -277,6 +298,13 @@ async def chat_stream(request: ChatRequest):
             context_str += "=== FIM DO CONTEÚDO DA WEB ===\n"
 
     all_sources = sources + web_sources
+    final_sys_prompt = f"{base_sys_prompt}{memory_context}"
+
+    if request.multi_agent:
+        final_sys_prompt += "\n\nVOCÊ DEVE ATUAR COMO UMA EQUIPE DE 3 AGENTES ESPECIALISTAS:\n"
+        final_sys_prompt += "1. [🔍 PESQUISADOR/ANALISTA]: Identifique e resuma as informações vitais do problema.\n"
+        final_sys_prompt += "2. [🛠️ CRIADOR/DESENVOLVEDOR]: Elabore a solução completa, detalhada ou código limpo.\n"
+        final_sys_prompt += "3. [🎯 REVISOR OTIMIZADOR]: Garanta que a solução final seja impecável, sem erros e responda exatamente o pedido."
 
     final_prompt = prompt
     if context_str:
@@ -285,6 +313,9 @@ async def chat_stream(request: ChatRequest):
     async def event_generator():
         yield f"data: {json.dumps({'type': 'sources', 'sources': all_sources})}\n\n"
         
+        if request.multi_agent:
+            yield f"data: {json.dumps({'type': 'stage_update', 'stage': 'Equipe de IAs Ativa (Pesquisa ➔ Criação ➔ Revisão)'})}\n\n"
+
         full_assistant_reply = ""
         start_time = time.time()
         token_count = 0
@@ -295,8 +326,8 @@ async def chat_stream(request: ChatRequest):
                 "prompt": final_prompt,
                 "stream": True
             }
-            if sys_prompt:
-                payload["system"] = sys_prompt
+            if final_sys_prompt:
+                payload["system"] = final_sys_prompt
             if request.images:
                 payload["images"] = request.images
             if request.options:

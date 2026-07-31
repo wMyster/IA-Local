@@ -91,6 +91,10 @@ body {
     gap: 16px;
 }
 
+.sidebar-action-box {
+    padding: 12px 16px 4px 16px;
+}
+
 .brand {
     display: flex;
     align-items: center;
@@ -118,7 +122,7 @@ body {
 
 .badge-offline {
     font-size: 11px;
-    color: #10b981;
+    color: #a855f7;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -175,8 +179,17 @@ body {
     border-color: var(--accent-primary);
 }
 
+/* MODO EQUIPE DE IAS TOP BUTTON */
+.multiagent-top-btn.active {
+    background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%) !important;
+    color: #ffffff !important;
+    border-color: rgba(236, 72, 153, 0.5) !important;
+    box-shadow: 0 0 14px rgba(168, 85, 247, 0.4);
+}
+
 .w-full { width: 100%; }
 .mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
 .mt-8 { margin-top: 8px; }
 .mt-10 { margin-top: 10px; }
 .mt-12 { margin-top: 12px; }
@@ -186,13 +199,13 @@ body {
 /* Barra de Busca de Histórico */
 .search-box-wrapper {
     position: relative;
-    padding: 12px 16px 4px 16px;
+    padding: 8px 16px 4px 16px;
 }
 
 .search-icon {
     position: absolute;
     left: 28px;
-    top: 22px;
+    top: 18px;
     font-size: 13px;
     color: var(--text-muted);
 }
@@ -401,7 +414,7 @@ body {
 .right-controls {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 }
 
 .control-group {
@@ -682,7 +695,6 @@ body {
     border-bottom-left-radius: 4px;
 }
 
-/* Métricas e Leitor por Voz */
 .message-footer-toolbar {
     display: flex;
     align-items: center;
@@ -921,7 +933,6 @@ body {
     color: var(--text-primary);
 }
 
-/* BOTÃO DE MICROFONE GRAVANDO */
 .mic-btn.recording {
     color: #ef4444 !important;
     background: rgba(239, 68, 68, 0.15) !important;
@@ -943,7 +954,6 @@ body {
     opacity: 0.9;
 }
 
-/* BOTÃO PARAR */
 .send-btn.stop-btn {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
     color: #ffffff !important;
@@ -966,8 +976,8 @@ body {
     border: 1px solid rgba(56, 189, 248, 0.4);
 }
 
-#web-search-indicator.active {
-    color: #38bdf8;
+#multiagent-status-indicator.active {
+    color: #a855f7;
     font-weight: 600;
 }
 
@@ -987,6 +997,28 @@ body {
     font-size: 11px;
     color: var(--text-muted);
     margin-top: 8px;
+}
+
+/* MEMÓRIAS ITEM */
+.memory-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.memory-cat-badge {
+    background: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+
 }
 
 /* MODAIS */
@@ -1128,7 +1160,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
 }
 

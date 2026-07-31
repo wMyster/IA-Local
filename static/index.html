@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IA Universal v4.0 - Super Edition</title>
+    <title>IA Universal v5.0 - Ultra Edition</title>
     <!-- Fontes e Ícones -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,12 +29,19 @@
                         <i class="fa-solid fa-brain"></i>
                     </div>
                     <div class="brand-title">
-                        <h2>IA Universal v4.0</h2>
-                        <span class="badge-offline"><i class="fa-solid fa-bolt"></i> Super Edition</span>
+                        <h2>IA Universal v5.0</h2>
+                        <span class="badge-offline"><i class="fa-solid fa-crown"></i> Ultra Edition</span>
                     </div>
                 </div>
                 <button id="btn-new-chat" class="btn-primary w-full">
                     <i class="fa-solid fa-plus"></i> Novo Chat <span class="shortcut-badge">Ctrl+N</span>
+                </button>
+            </div>
+
+            <!-- Botão de Memória da IA na Sidebar -->
+            <div class="sidebar-action-box">
+                <button id="btn-open-memories-sidebar" class="btn-secondary w-full">
+                    <i class="fa-solid fa-brain"></i> Memória Pessoal (<span id="memory-count-badge">0</span>)
                 </button>
             </div>
 
@@ -89,16 +96,15 @@
                         </select>
                     </div>
 
-                    <!-- Seletor de Persona -->
-                    <div class="control-group">
-                        <label for="select-persona"><i class="fa-solid fa-user-gear"></i> Persona:</label>
-                        <select id="select-persona" class="custom-select">
-                            <option value="general">Assistente Geral</option>
-                            <option value="coder">Especialista em Programação</option>
-                            <option value="doc_analyzer">Analista de Documentos</option>
-                            <option value="custom">Prompt Personalizado...</option>
-                        </select>
-                    </div>
+                    <!-- Toggle Modo Equipe de IAs (Multi-Agent) -->
+                    <button id="btn-toggle-multiagent" class="btn-secondary multiagent-top-btn" title="Ativar Modo Equipe de 3 IAs (Pesquisador, Criador, Revisor)">
+                        <i class="fa-solid fa-users-gear"></i> 🎭 Modo Equipe
+                    </button>
+
+                    <!-- Botão Memória Pessoal -->
+                    <button id="btn-open-memories" class="icon-btn" title="Ver Memória Pessoal Aprendida">
+                        <i class="fa-solid fa-brain"></i>
+                    </button>
 
                     <!-- Botão de Configurações da IA -->
                     <button id="btn-settings" class="icon-btn" title="Configurações da IA (Temperatura, Contexto)">
@@ -116,11 +122,6 @@
                             <button onclick="exportCurrentChat('json')"><i class="fa-solid fa-code"></i> Exportar JSON (.json)</button>
                         </div>
                     </div>
-
-                    <!-- Botão do Modal de System Prompt -->
-                    <button id="btn-edit-prompt" class="icon-btn" title="Editar Prompt de Sistema">
-                        <i class="fa-solid fa-sliders"></i>
-                    </button>
 
                     <!-- Toggle de Tema -->
                     <button id="btn-theme-toggle" class="icon-btn" title="Alternar Tema Dark/Light">
@@ -145,24 +146,24 @@
                         <div class="welcome-icon">
                             <i class="fa-solid fa-robot"></i>
                         </div>
-                        <h1>IA Universal v4.0 (Super Edition)</h1>
-                        <p>100% Gratuita, código aberto. Entrada por Voz (Microfone 🎤), Abas Simultâneas, Leitor de PDFs e Live Web Scraper!</p>
+                        <h1>IA Universal v5.0 (Ultra Edition)</h1>
+                        <p>Diferenciador único: Modo Equipe de IAs (3 Agentes), Memória Auto-Evolutiva de Longo Prazo, Microfone 🎤 e Live Web Scraper!</p>
                         
                         <div class="feature-cards">
+                            <div class="card" onclick="document.getElementById('btn-toggle-multiagent').click()">
+                                <i class="fa-solid fa-users-gear"></i>
+                                <h4>Modo Equipe de IAs 🎭</h4>
+                                <p>3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) colaborando para criar a resposta perfeita.</p>
+                            </div>
+                            <div class="card" onclick="document.getElementById('btn-open-memories').click()">
+                                <i class="fa-solid fa-brain"></i>
+                                <h4>Memória Auto-Evolutiva 🧠</h4>
+                                <p>A IA aprende seu perfil, regras e preferências e lembra em todas as futuras conversas.</p>
+                            </div>
                             <div class="card" onclick="document.getElementById('btn-mic').click()">
                                 <i class="fa-solid fa-microphone"></i>
                                 <h4>Entrada por Voz (Microfone)</h4>
-                                <p>Clique no microfone ou pressione Alt+M para falar sua pergunta.</p>
-                            </div>
-                            <div class="card" onclick="document.getElementById('btn-add-tab').click()">
-                                <i class="fa-solid fa-layer-group"></i>
-                                <h4>Abas de Chat Simultâneas</h4>
-                                <p>Abra múltiplos chats paralelos e navegue sem perder o contexto.</p>
-                            </div>
-                            <div class="card" onclick="document.getElementById('btn-upload').click()">
-                                <i class="fa-solid fa-file-pdf"></i>
-                                <h4>Resumo de PDFs & Leitor Lado a Lado</h4>
-                                <p>Anexe um PDF para resumir com 1 clique e ler o texto em painel lateral.</p>
+                                <p>Fale sua pergunta usando a voz via atalho Alt+M.</p>
                             </div>
                         </div>
                     </div>
@@ -192,18 +193,18 @@
             <!-- Barra Inferior de Entrada de Mensagem -->
             <div class="input-area">
                 <div class="input-wrapper">
-                    <!-- Botão de Microfone / Entrada por Voz -->
+                    <!-- Botão de Microfone -->
                     <button id="btn-mic" class="input-action-btn mic-btn" title="Falar por voz via Microfone (Alt+M)">
                         <i class="fa-solid fa-microphone"></i>
                     </button>
 
-                    <!-- Upload de Imagem (Visão) -->
+                    <!-- Upload de Imagem -->
                     <button id="btn-image-upload" class="input-action-btn" title="Anexar Imagem (PNG, JPG, WEBP)">
                         <i class="fa-solid fa-image"></i>
                     </button>
                     <input type="file" id="image-upload-input" accept="image/*" multiple style="display: none;">
 
-                    <!-- Upload de Documento (RAG) -->
+                    <!-- Upload de Documento -->
                     <button id="btn-upload" class="input-action-btn" title="Anexar Documento (PDF, TXT, DOCX)">
                         <i class="fa-solid fa-paperclip"></i>
                     </button>
@@ -214,8 +215,8 @@
                         <i class="fa-solid fa-globe"></i>
                     </button>
 
-                    <!-- Textarea com Auto-height -->
-                    <textarea id="chat-input" placeholder="Pergunte algo, fale pelo microfone (Alt+M) ou ative o Live Web Scraper..." rows="1"></textarea>
+                    <!-- Textarea -->
+                    <textarea id="chat-input" placeholder="Pergunte algo, diga 'Lembre-se que...', fale por voz (Alt+M) ou ative a Equipe de IAs 🎭..." rows="1"></textarea>
 
                     <!-- Botão de Enviar / Parar -->
                     <button id="btn-send" class="input-action-btn send-btn" title="Enviar Mensagem">
@@ -223,13 +224,38 @@
                     </button>
                 </div>
                 <div class="input-footer-note">
-                    <span id="web-search-indicator" class="text-muted"><i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado</span>
+                    <span id="multiagent-status-indicator" class="text-muted"><i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado</span>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Gaveta / Modal de Leitor de Documentos Lado a Lado -->
+    <!-- Modal de Gerenciamento de Memória Pessoal -->
+    <div id="memory-modal" class="modal-backdrop hidden">
+        <div class="modal-content glass-card modal-large">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-brain"></i> Memória de Longo Prazo Auto-Evolutiva</h3>
+                <button id="btn-close-memory-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>A IA aprende seu perfil e preferências automaticamente nas conversas. Você também pode adicionar memórias manuais:</p>
+                <div class="input-inline mt-12 mb-16">
+                    <input type="text" id="new-mem-key" placeholder="Ex: Linguagem Favorita">
+                    <input type="text" id="new-mem-val" placeholder="Ex: Python, FastAPI e HTML5">
+                    <button id="btn-add-memory" class="btn-primary"><i class="fa-solid fa-plus"></i> Salvar</button>
+                </div>
+
+                <div class="installed-models-box mt-16">
+                    <label><strong>Conhecimento Guardado sobre Você:</strong></label>
+                    <div id="memories-list" class="installed-models-list mt-10">
+                        <!-- Memórias via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gaveta / Modal de Leitor de Documentos -->
     <div id="doc-viewer-modal" class="modal-backdrop hidden">
         <div class="modal-content glass-card modal-large">
             <div class="modal-header">
@@ -283,23 +309,6 @@
             </div>
             <div class="modal-body preview-body">
                 <iframe id="code-preview-iframe" sandbox="allow-scripts"></iframe>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Edição de System Prompt -->
-    <div id="prompt-modal" class="modal-backdrop hidden">
-        <div class="modal-content glass-card">
-            <div class="modal-header">
-                <h3><i class="fa-solid fa-sliders"></i> Prompt de Sistema</h3>
-                <button id="btn-close-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="modal-body">
-                <p>Defina as instruções de comportamento da IA:</p>
-                <textarea id="modal-system-prompt" rows="5" placeholder="Ex: Você é um assistente atencioso..."></textarea>
-            </div>
-            <div class="modal-footer">
-                <button id="btn-save-prompt" class="btn-primary">Salvar Prompt</button>
             </div>
         </div>
     </div>
