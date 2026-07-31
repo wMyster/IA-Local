@@ -9,6 +9,11 @@ let isWebSearchEnabled = false;
 let currentUtterance = null;
 let allConversations = [];
 let selectedBase64Images = [];
+let openTabs = [];
+
+// Gravação de Voz (Speech-to-Text)
+let recognition = null;
+let isRecording = false;
 
 const PERSONAS = {
     general: "Você é um assistente virtual útil, preciso e atencioso.",
@@ -20,6 +25,8 @@ const PERSONAS = {
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     setupMarkedOptions();
+    setupSpeechRecognition();
+    setupKeyboardShortcuts();
     checkOllamaStatus();
     loadAvailableModels();
     loadConversationsList();
@@ -48,9 +55,100 @@ function updateThemeIcon(theme) {
     }
 }
 
+// ATALHOS DE TECLADO
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        // Ctrl + N -> Novo Chat
+        if (e.ctrlKey && e.key.toLowerCase() === 'n') {
+            e.preventDefault();
+            createNewChat();
+        }
+        // Ctrl + K -> Foco na Pesquisa
+        else if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            const searchInput = document.getElementById('history-search-input');
+            if (searchInput) searchInput.focus();
+        }
+        // Alt + M -> Microfone (Entrada por Voz)
+        else if (e.altKey && e.key.toLowerCase() === 'm') {
+            e.preventDefault();
+            toggleSpeechRecognition();
+        }
+        // Esc -> Fechar Modais
+        else if (e.key === 'Escape') {
+            closeAllModals();
+        }
+    });
+}
+
+function closeAllModals() {
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.add('hidden'));
+}
+
+// RECONHECIMENTO DE VOZ (MICROFONE)
+function setupSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'pt-BR';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+            isRecording = true;
+            const micBtn = document.getElementById('btn-mic');
+            if (micBtn) micBtn.classList.add('recording');
+        };
+
+        recognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            const input = document.getElementById('chat-input');
+            if (input) {
+                input.value = transcript;
+                input.dispatchEvent(new Event('input'));
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Erro no reconhecimento de voz:', event.error);
+            stopSpeechRecognition();
+        };
+
+        recognition.onend = () => {
+            stopSpeechRecognition();
+        };
+    }
+}
+
+function toggleSpeechRecognition() {
+    if (!recognition) {
+        alert('Seu navegador não suporta a API de Reconhecimento de Voz por Microfone.');
+        return;
+    }
+    if (isRecording) {
+        recognition.stop();
+    } else {
+        try {
+            recognition.start();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+}
+
+function stopSpeechRecognition() {
+    isRecording = false;
+    const micBtn = document.getElementById('btn-mic');
+    if (micBtn) micBtn.classList.remove('recording');
+}
+
 // EVENT LISTENERS
 function setupEventListeners() {
     document.getElementById('btn-new-chat').addEventListener('click', createNewChat);
+    document.getElementById('btn-add-tab').addEventListener('click', createNewChat);
 
     document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
         document.getElementById('sidebar').classList.toggle('collapsed');
@@ -64,7 +162,7 @@ function setupEventListeners() {
         updateThemeIcon(newTheme);
     });
 
-    // Toggle Pesquisa Web / Live Scraper
+    // Toggle Pesquisa Web
     const webBtn = document.getElementById('btn-toggle-web');
     const webIndicator = document.getElementById('web-search-indicator');
     webBtn.addEventListener('click', () => {
@@ -101,6 +199,14 @@ function setupEventListeners() {
                 updateConversationMeta({ system_prompt: currentSystemPrompt });
             }
         }
+    });
+
+    // Botão de Microfone
+    document.getElementById('btn-mic').addEventListener('click', toggleSpeechRecognition);
+
+    // Leitor de Documento Modal
+    document.getElementById('btn-close-doc-viewer').addEventListener('click', () => {
+        document.getElementById('doc-viewer-modal').classList.add('hidden');
     });
 
     // Configurações da IA Modal
@@ -171,6 +277,47 @@ function setupEventListeners() {
     document.getElementById('btn-refresh-status').addEventListener('click', checkOllamaStatus);
 }
 
+// ABAS DE CHAT SIMULTÂNEAS
+function addTab(convId, title) {
+    const existing = openTabs.find(t => t.id === convId);
+    if (!existing) {
+        openTabs.push({ id: convId, title: title || "Nova Conversa" });
+    } else if (title) {
+        existing.title = title;
+    }
+    renderTabs();
+}
+
+function removeTab(convId, e) {
+    if (e) e.stopPropagation();
+    openTabs = openTabs.filter(t => t.id !== convId);
+    if (currentConversationId === convId) {
+        if (openTabs.length > 0) {
+            loadConversation(openTabs[openTabs.length - 1].id);
+        } else {
+            createNewChat();
+        }
+    } else {
+        renderTabs();
+    }
+}
+
+function renderTabs() {
+    const container = document.getElementById('tabs-container');
+    container.innerHTML = '';
+
+    openTabs.forEach(t => {
+        const tab = document.createElement('div');
+        tab.className = `tab-item ${t.id === currentConversationId ? 'active' : ''}`;
+        tab.onclick = () => loadConversation(t.id);
+        tab.innerHTML = `
+            <span>${escapeHtml(t.title)}</span>
+            <i class="fa-solid fa-xmark tab-close" onclick="removeTab('${t.id}', event)"></i>
+        `;
+        container.appendChild(tab);
+    });
+}
+
 // HIPERPARÂMETROS DA IA
 function loadSavedSettings() {
     const saved = localStorage.getItem('ia_settings');
@@ -204,7 +351,7 @@ function saveSettings() {
     const opts = getAiOptions();
     localStorage.setItem('ia_settings', JSON.stringify(opts));
     closeSettingsModal();
-    alert('Configurações da IA salvas com sucesso!');
+    alert('Configurações salvas!');
 }
 
 function getAiOptions() {
@@ -496,24 +643,24 @@ function renderWelcomeScreen() {
             <div class="welcome-icon">
                 <i class="fa-solid fa-robot"></i>
             </div>
-            <h1>IA Universal v3.0</h1>
-            <p>100% Gratuita, código aberto, sem APIs pagas. Live Web Scraper, Análise de Imagens e Live Code Preview!</p>
+            <h1>IA Universal v4.0 (Super Edition)</h1>
+            <p>100% Gratuita, código aberto. Entrada por Voz (Microfone 🎤), Abas Simultâneas, Leitor de PDFs e Live Web Scraper!</p>
             
             <div class="feature-cards">
-                <div class="card" onclick="document.getElementById('btn-toggle-web').click(); setInputPrompt('Quais são as últimas notícias sobre IA e tecnologia hoje?')">
-                    <i class="fa-solid fa-globe"></i>
-                    <h4>Live Web Scraper</h4>
-                    <p>"Quais são as últimas notícias sobre IA e tecnologia hoje?"</p>
+                <div class="card" onclick="document.getElementById('btn-mic').click()">
+                    <i class="fa-solid fa-microphone"></i>
+                    <h4>Entrada por Voz (Microfone)</h4>
+                    <p>Clique no microfone ou pressione Alt+M para falar sua pergunta.</p>
                 </div>
-                <div class="card" onclick="setInputPrompt('Crie uma landing page interativa em HTML5, CSS3 e JavaScript com modo dark e botões animados.')">
-                    <i class="fa-solid fa-eye"></i>
-                    <h4>Live Code Preview</h4>
-                    <p>"Crie uma landing page em HTML5/JS para eu ver o Preview ao vivo."</p>
+                <div class="card" onclick="document.getElementById('btn-add-tab').click()">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <h4>Abas de Chat Simultâneas</h4>
+                    <p>Abra múltiplos chats paralelos e navegue sem perder o contexto.</p>
                 </div>
-                <div class="card" onclick="document.getElementById('image-upload-input').click()">
-                    <i class="fa-solid fa-image"></i>
-                    <h4>Análise de Imagens (Visão)</h4>
-                    <p>Anexe uma foto (PNG, JPG) para a IA descrever ou extrair código.</p>
+                <div class="card" onclick="document.getElementById('btn-upload').click()">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <h4>Resumo de PDFs & Leitor Lado a Lado</h4>
+                    <p>Anexe um PDF para resumir com 1 clique e ler o texto em painel lateral.</p>
                 </div>
             </div>
         </div>
@@ -538,6 +685,7 @@ async function loadConversation(convId) {
             document.getElementById('modal-system-prompt').value = currentSystemPrompt;
         }
 
+        addTab(convId, data.conversation.title);
         renderMessages(data.messages);
         renderAttachedDocuments(data.documents);
     } catch (err) {
@@ -565,19 +713,8 @@ async function deleteConv(event, convId) {
     try {
         await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
         
-        if (currentConversationId === convId) {
-            currentConversationId = null;
-        }
-        
+        removeTab(convId, null);
         await loadConversationsList();
-        
-        if (!currentConversationId) {
-            if (allConversations.length > 0) {
-                loadConversation(allConversations[0].id);
-            } else {
-                createNewChat();
-            }
-        }
     } catch (err) {
         console.error('Erro ao deletar conversa:', err);
     }
@@ -588,7 +725,7 @@ function exportCurrentChat(format) {
     window.location.href = `/api/conversations/${currentConversationId}/export?format=${format}`;
 }
 
-// UPLOAD DE DOCUMENTOS (RAG)
+// UPLOAD DE DOCUMENTOS & RESUMO EM 1 CLIQUE (RAG)
 async function handleFileUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -635,10 +772,32 @@ function renderAttachedDocuments(docs) {
         chip.innerHTML = `
             <i class="fa-solid fa-file-lines"></i>
             <span>${escapeHtml(d.filename)} (${d.chunk_count} trechos)</span>
-            <i class="fa-solid fa-xmark doc-chip-remove" onclick="deleteDocument('${d.id}')"></i>
+            <i class="fa-solid fa-eye doc-action-icon" title="Ver Texto Extraído" onclick="viewDocText('${d.id}', '${escapeHtml(d.filename)}')"></i>
+            <i class="fa-solid fa-bolt doc-action-icon" title="Resumir Documento em 1 Clique" onclick="summarizeDoc('${escapeHtml(d.filename)}')"></i>
+            <i class="fa-solid fa-xmark doc-chip-remove" title="Remover Documento" onclick="deleteDocument('${d.id}')"></i>
         `;
         container.appendChild(chip);
     });
+}
+
+async function viewDocText(docId, filename) {
+    if (!currentConversationId) return;
+    try {
+        const res = await fetch(`/api/conversations/${currentConversationId}/documents/${docId}/text`);
+        const data = await res.json();
+        
+        document.getElementById('doc-viewer-title').innerHTML = `<i class="fa-solid fa-file-lines"></i> Documento: ${filename}`;
+        document.getElementById('doc-viewer-content').value = data.text || "Nenhum texto extraído do documento.";
+        document.getElementById('doc-viewer-modal').classList.remove('hidden');
+    } catch (err) {
+        alert('Erro ao carregar o texto do documento.');
+    }
+}
+
+function summarizeDoc(filename) {
+    const input = document.getElementById('chat-input');
+    input.value = `Resuma o documento "${filename}" em tópicos claros e objetivos, destacando os pontos principais.`;
+    sendMessage();
 }
 
 async function deleteDocument(docId) {
@@ -733,6 +892,7 @@ async function ensureActiveConversation() {
         });
         const conv = await res.json();
         currentConversationId = conv.id;
+        addTab(conv.id, conv.title);
         await loadConversationsList();
         return currentConversationId;
     } catch (err) {
@@ -792,7 +952,6 @@ async function sendMessage() {
 
     appendMessageUI('user', prompt || "[Imagem Enviada para Análise]");
 
-    // Limpar imagens após envio
     selectedBase64Images = [];
     renderImageChips();
 
@@ -856,6 +1015,7 @@ async function sendMessage() {
                             }
                         } else if (payload.type === 'title_update') {
                             document.getElementById('current-chat-title').innerText = payload.title;
+                            addTab(currentConversationId, payload.title);
                             loadConversationsList();
                         }
                     } catch (e) {
@@ -898,7 +1058,6 @@ function formatCodeBlocks(container) {
             };
             parent.appendChild(copyBtn);
 
-            // Adicionar botão de Live Code Preview se for HTML/JS/CSS
             const codeText = block.innerText.trim();
             if (codeText.startsWith('<') || codeText.includes('<!DOCTYPE') || codeText.includes('<html') || codeText.includes('<div')) {
                 const previewBtn = document.createElement('button');

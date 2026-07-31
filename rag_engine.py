@@ -47,7 +47,6 @@ def chunk_text(text: str, chunk_size: int = 600, overlap: int = 100) -> List[str
     if not text:
         return []
         
-    # Quebrar texto em parágrafos ou frases se possível
     paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
     chunks = []
     current_chunk = ""
@@ -58,7 +57,6 @@ def chunk_text(text: str, chunk_size: int = 600, overlap: int = 100) -> List[str
         else:
             if current_chunk:
                 chunks.append(current_chunk)
-            # Se um parágrafo sozinho for muito grande, fatia pelo tamanho fixo
             if len(p) > chunk_size:
                 start = 0
                 while start < len(p):
@@ -92,6 +90,11 @@ def index_document(conversation_id: str, doc_id: str, filename: str, file_bytes:
         })
         
     return len(chunks)
+
+def get_document_full_text(conversation_id: str, doc_id: str) -> str:
+    chunks = CONVERSATION_CHUNKS.get(conversation_id, [])
+    doc_chunks = [c["text"] for c in chunks if c.get("doc_id") == doc_id]
+    return "\n\n".join(doc_chunks)
 
 def remove_document_chunks(conversation_id: str, doc_id: str):
     if conversation_id in CONVERSATION_CHUNKS:

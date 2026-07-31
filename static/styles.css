@@ -146,6 +146,14 @@ body {
     box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
+.shortcut-badge {
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: auto;
+}
+
 .btn-secondary {
     background: var(--bg-card);
     color: var(--text-primary);
@@ -167,10 +175,7 @@ body {
     border-color: var(--accent-primary);
 }
 
-.w-full {
-    width: 100%;
-}
-
+.w-full { width: 100%; }
 .mb-12 { margin-bottom: 12px; }
 .mt-8 { margin-top: 8px; }
 .mt-10 { margin-top: 10px; }
@@ -420,6 +425,73 @@ body {
 
 .custom-select:focus {
     border-color: var(--accent-primary);
+}
+
+/* BARRA DE ABAS SIMULTÂNEAS DE CHAT */
+.chat-tabs-bar {
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border-color);
+    padding: 4px 16px 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+.tabs-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tab-item {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    padding: 6px 14px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.tab-item.active {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    border-color: var(--border-color-highlight);
+    font-weight: 600;
+}
+
+.tab-close {
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.tab-close:hover {
+    color: #ef4444;
+}
+
+.add-tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+
+.add-tab-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-card-hover);
 }
 
 /* Dropdown Menu de Exportação */
@@ -775,6 +847,17 @@ body {
     gap: 6px;
 }
 
+.doc-action-icon {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-left: 2px;
+}
+
+.doc-action-icon:hover {
+    color: var(--accent-primary);
+}
+
 .image-chip img {
     width: 24px;
     height: 24px;
@@ -836,6 +919,19 @@ body {
 .input-action-btn:hover {
     background: var(--bg-card-hover);
     color: var(--text-primary);
+}
+
+/* BOTÃO DE MICROFONE GRAVANDO */
+.mic-btn.recording {
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.15) !important;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    animation: pulse-mic 1.2s infinite;
+}
+
+@keyframes pulse-mic {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
 .send-btn {

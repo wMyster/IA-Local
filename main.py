@@ -15,7 +15,7 @@ import web_search
 
 OLLAMA_URL = "http://localhost:11434"
 
-app = FastAPI(title="IA Local & Web Search v3.0", version="3.0.0")
+app = FastAPI(title="IA Universal v4.0 (Super Edition)", version="4.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -222,6 +222,11 @@ async def upload_document(conv_id: str, file: UploadFile = File(...)):
 @app.get("/api/conversations/{conv_id}/documents")
 def get_attached_documents(conv_id: str):
     return db.get_documents(conv_id)
+
+@app.get("/api/conversations/{conv_id}/documents/{doc_id}/text")
+def get_attached_document_text(conv_id: str, doc_id: str):
+    text = rag.get_document_full_text(conv_id, doc_id)
+    return {"text": text}
 
 @app.delete("/api/conversations/{conv_id}/documents/{doc_id}")
 def delete_attached_document(conv_id: str, doc_id: str):
