@@ -3,6 +3,7 @@ let currentConversationId = null;
 let selectedModel = "";
 let currentSystemPrompt = "Você é um assistente virtual útil, preciso e atencioso.";
 let isStreaming = false;
+let activeAbortController = null;
 let isSpeaking = false;
 let isWebSearchEnabled = false;
 let currentUtterance = null;
@@ -127,7 +128,7 @@ function setupEventListeners() {
     });
     document.getElementById('file-upload-input').addEventListener('change', handleFileUpload);
 
-    document.getElementById('btn-send').addEventListener('click', sendMessage);
+    document.getElementById('btn-send').addEventListener('click', handleSendButtonClick);
     
     const textarea = document.getElementById('chat-input');
     textarea.addEventListener('input', () => {
@@ -137,7 +138,7 @@ function setupEventListeners() {
     textarea.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            handleSendButtonClick();
         }
     });
 
@@ -316,16 +317,12 @@ async function startModelPull() {
     }
 }
 
-// CONVERSAS & BUSCA NO HISTÓRICO
+// CONVERSAS & HISTÓRICO
 async function loadConversationsList() {
     try {
         const res = await fetch('/api/conversations');
         allConversations = await res.json();
         renderConversations(allConversations);
-
-        if (!currentConversationId && allConversations.length > 0) {
-            loadConversation(allConversations[0].id);
-        }
     } catch (err) {
         console.error('Erro ao carregar conversas:', err);
     }
@@ -370,23 +367,42 @@ function renderConversations(conversations) {
 }
 
 async function createNewChat() {
-    try {
-        const res = await fetch('/api/conversations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title: 'Nova Conversa',
-                system_prompt: currentSystemPrompt,
-                model: selectedModel
-            })
-        });
-        const conv = await res.json();
-        currentConversationId = conv.id;
-        await loadConversationsList();
-        loadConversation(conv.id);
-    } catch (err) {
-        console.error('Erro ao criar conversa:', err);
-    }
+    currentConversationId = null;
+    document.getElementById('current-chat-title').innerText = "Nova Conversa";
+    document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+    renderWelcomeScreen();
+}
+
+function renderWelcomeScreen() {
+    const container = document.getElementById('messages-container');
+    container.innerHTML = `
+        <div id="welcome-screen" class="welcome-screen">
+            <div class="welcome-icon">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+            <h1>Inteligência Artificial "Para Todos" v2.0</h1>
+            <p>100% Gratuita, código aberto, sem chaves de API pagas. Funciona Offline e Online!</p>
+            
+            <div class="feature-cards">
+                <div class="card" onclick="setInputPrompt('Como funciona o raciocínio no modelo DeepSeek R1 7B?')">
+                    <i class="fa-solid fa-brain"></i>
+                    <h4>Raciocínio Avançado</h4>
+                    <p>"Como funciona o raciocínio no modelo DeepSeek R1 7B?"</p>
+                </div>
+                <div class="card" onclick="setInputPrompt('Escreva uma função em Python para filtrar dados de uma lista.')">
+                    <i class="fa-solid fa-code"></i>
+                    <h4>Geração de Código</h4>
+                    <p>"Escreva uma função em Python para filtrar dados de uma lista."</p>
+                </div>
+                <div class="card" onclick="document.getElementById('btn-toggle-web').click(); setInputPrompt('Quais são as últimas notícias sobre exploração espacial?')">
+                    <i class="fa-solid fa-globe"></i>
+                    <h4>Pesquisa Web em Tempo Real</h4>
+                    <p>"Quais são as últimas notícias sobre exploração espacial?"</p>
+                </div>
+            </div>
+        </div>
+    `;
+    renderAttachedDocuments([]);
 }
 
 async function loadConversation(convId) {
@@ -432,10 +448,20 @@ async function deleteConv(event, convId) {
 
     try {
         await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
+        
         if (currentConversationId === convId) {
             currentConversationId = null;
         }
+        
         await loadConversationsList();
+        
+        if (!currentConversationId) {
+            if (allConversations.length > 0) {
+                loadConversation(allConversations[0].id);
+            } else {
+                createNewChat();
+            }
+        }
     } catch (err) {
         console.error('Erro ao deletar conversa:', err);
     }
@@ -449,7 +475,11 @@ function exportCurrentChat(format) {
 // UPLOAD DE DOCUMENTOS (RAG)
 async function handleFileUpload(e) {
     const file = e.target.files[0];
-    if (!file || !currentConversationId) return;
+    if (!file) return;
+
+    if (!currentConversationId) {
+        await ensureActiveConversation();
+    }
 
     const formData = new FormData();
     formData.append('file', file);
@@ -505,16 +535,13 @@ async function deleteDocument(docId) {
     }
 }
 
-// MENSAGENS, STREAMING E FONTES
+// MENSAGENS, STREAMING, BOTÃO PARAR E FONTES
 function renderMessages(messages) {
     const container = document.getElementById('messages-container');
     container.innerHTML = '';
 
     if (!messages || messages.length === 0) {
-        const welcome = document.getElementById('welcome-screen');
-        if (welcome) {
-            container.appendChild(welcome.cloneNode(true));
-        }
+        renderWelcomeScreen();
         return;
     }
 
@@ -528,7 +555,7 @@ function renderMessages(messages) {
 function appendMessageUI(role, content, sources = [], metrics = null) {
     const container = document.getElementById('messages-container');
     
-    const welcome = container.querySelector('.welcome-screen');
+    const welcome = container.querySelector('#welcome-screen');
     if (welcome) welcome.remove();
 
     const row = document.createElement('div');
@@ -575,16 +602,71 @@ function appendMessageUI(role, content, sources = [], metrics = null) {
     return row;
 }
 
+async function ensureActiveConversation() {
+    if (currentConversationId) return currentConversationId;
+
+    try {
+        const res = await fetch('/api/conversations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: 'Nova Conversa',
+                system_prompt: currentSystemPrompt,
+                model: selectedModel
+            })
+        });
+        const conv = await res.json();
+        currentConversationId = conv.id;
+        await loadConversationsList();
+        return currentConversationId;
+    } catch (err) {
+        console.error('Erro ao criar conversa inicial:', err);
+        return null;
+    }
+}
+
+function handleSendButtonClick() {
+    if (isStreaming && activeAbortController) {
+        stopGeneration();
+    } else {
+        sendMessage();
+    }
+}
+
+function stopGeneration() {
+    if (activeAbortController) {
+        activeAbortController.abort();
+        activeAbortController = null;
+    }
+}
+
+function updateSendButtonUI(streaming) {
+    const btn = document.getElementById('btn-send');
+    if (streaming) {
+        btn.className = 'input-action-btn send-btn stop-btn';
+        btn.title = 'Parar Resposta';
+        btn.innerHTML = '<i class="fa-solid fa-square"></i>';
+    } else {
+        btn.className = 'input-action-btn send-btn';
+        btn.title = 'Enviar Mensagem';
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+    }
+}
+
 async function sendMessage() {
     if (isStreaming) return;
 
     const input = document.getElementById('chat-input');
     const prompt = input.value.trim();
-    if (!prompt || !currentConversationId) return;
+    if (!prompt) return;
 
     if (!selectedModel) {
         alert('Por favor, selecione um modelo de IA no topo da tela antes de enviar.');
         return;
+    }
+
+    if (!currentConversationId) {
+        await ensureActiveConversation();
     }
 
     input.value = '';
@@ -597,6 +679,9 @@ async function sendMessage() {
     textElement.classList.add('cursor-typing');
 
     isStreaming = true;
+    activeAbortController = new AbortController();
+    updateSendButtonUI(true);
+
     let fullReply = '';
     let sources = [];
     let metrics = null;
@@ -611,7 +696,8 @@ async function sendMessage() {
                 model: selectedModel,
                 system_prompt: currentSystemPrompt,
                 web_search: isWebSearchEnabled
-            })
+            }),
+            signal: activeAbortController.signal
         });
 
         const reader = response.body.getReader();
@@ -655,11 +741,18 @@ async function sendMessage() {
             }
         }
     } catch (err) {
-        fullReply += '\n\n⚠️ Erro de conexão durante a comunicação com a IA.';
-        textElement.innerHTML = marked.parse(fullReply);
+        if (err.name === 'AbortError') {
+            fullReply += ' _[Geração interrompida pelo usuário]_';
+            textElement.innerHTML = marked.parse(fullReply);
+        } else {
+            fullReply += '\n\n⚠️ Erro de conexão durante a comunicação com a IA.';
+            textElement.innerHTML = marked.parse(fullReply);
+        }
     } finally {
         textElement.classList.remove('cursor-typing');
         isStreaming = false;
+        activeAbortController = null;
+        updateSendButtonUI(false);
         loadConversationsList();
     }
 }

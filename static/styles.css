@@ -834,6 +834,19 @@ body {
     opacity: 0.9;
 }
 
+/* BOTÃO DE PARAR RESPOSTA (STOP BTN) */
+.send-btn.stop-btn {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+    animation: pulse-stop 1.5s infinite;
+}
+
+@keyframes pulse-stop {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
 .web-btn {
     color: var(--text-muted);
 }
