@@ -122,7 +122,7 @@ body {
 
 .badge-offline {
     font-size: 11px;
-    color: #ec4899;
+    color: #f59e0b;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -179,7 +179,95 @@ body {
     border-color: var(--accent-primary);
 }
 
-/* MONITOR DE HARDWARE CARD (v7.0) */
+/* PASTAS / PROJETOS SANFONADOS (v8.0) */
+.folders-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.folder-item {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.folder-header {
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.folder-header:hover {
+    background: var(--bg-card-hover);
+}
+
+.folder-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.folder-chats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 8px 8px 16px;
+}
+
+.folder-chats.collapsed {
+    display: none;
+}
+
+/* ESTRELA E MENSAGENS FAVORITAS (v8.0) */
+.favorite-star-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+}
+
+.favorite-star-btn:hover, .favorite-star-btn.active {
+    color: #f59e0b !important;
+}
+
+.fav-item {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.fav-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* GRÁFICOS STATS CHART.JS (v8.0) */
+.chart-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px 0;
+    max-width: 100%;
+    position: relative;
+}
+
+/* MONITOR DE HARDWARE CARD */
 .hardware-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -234,6 +322,7 @@ body {
 }
 
 .mt-6 { margin-top: 6px; }
+.mb-8 { margin-bottom: 8px; }
 
 /* ARENA DE MODELOS */
 .arena-top-btn.active {

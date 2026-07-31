@@ -17,7 +17,7 @@ import web_search
 
 OLLAMA_URL = "http://localhost:11434"
 
-app = FastAPI(title="IA Universal v7.0 (Masterpiece Edition)", version="7.0.0")
+app = FastAPI(title="IA Universal v8.0 (Omni Edition)", version="8.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,15 +32,20 @@ def startup():
     db.init_db()
 
 # Models de requisição
+class FolderCreate(BaseModel):
+    name: str
+
 class ConversationCreate(BaseModel):
     title: Optional[str] = "Nova Conversa"
     system_prompt: Optional[str] = "Você é um assistente virtual útil, preciso e atencioso."
     model: Optional[str] = ""
+    folder_id: Optional[str] = ""
 
 class ConversationUpdate(BaseModel):
     title: Optional[str] = None
     system_prompt: Optional[str] = None
     model: Optional[str] = None
+    folder_id: Optional[str] = None
 
 class MemoryCreate(BaseModel):
     memory_key: str
@@ -78,7 +83,7 @@ async def get_status():
         pass
     return {"status": "offline", "version": None, "url": OLLAMA_URL}
 
-# --- MONITOR DE RECURSOS DE HARDWARE EM TEMPO REAL (v7.0) ---
+# Monitor de Recursos de Hardware do PC (v7.0)
 @app.get("/api/hardware")
 def get_hardware_stats():
     try:
@@ -93,8 +98,40 @@ def get_hardware_stats():
             "ram_used_gb": ram_used_gb,
             "ram_total_gb": ram_total_gb
         }
-    except Exception as e:
+    except Exception:
         return {"cpu_percent": 0, "ram_percent": 0, "ram_used_gb": 0, "ram_total_gb": 0}
+
+# --- PASTAS / PROJETOS (v8.0) ---
+@app.get("/api/folders")
+def list_folders():
+    return db.list_folders()
+
+@app.post("/api/folders")
+def create_folder(data: FolderCreate):
+    if not data.name.strip():
+        raise HTTPException(status_code=400, detail="Nome da pasta é obrigatório.")
+    return db.create_folder(data.name.strip())
+
+@app.delete("/api/folders/{folder_id}")
+def delete_folder(folder_id: str):
+    db.delete_folder(folder_id)
+    return {"status": "success"}
+
+# --- FAVORITOS & BUSCA EM MENSAGENS (v8.0) ---
+@app.post("/api/messages/{msg_id}/favorite")
+def toggle_favorite(msg_id: str):
+    is_fav = db.toggle_favorite_message(msg_id)
+    return {"status": "success", "is_favorite": is_fav}
+
+@app.get("/api/favorites")
+def list_favorites():
+    return db.get_favorite_messages()
+
+@app.get("/api/messages/search")
+def search_messages(q: str = Query("")):
+    if not q.strip():
+        return []
+    return db.search_messages_content(q.strip())
 
 @app.get("/api/models")
 async def list_models():
@@ -162,7 +199,7 @@ def get_conversations():
 
 @app.post("/api/conversations")
 def create_new_conversation(data: ConversationCreate):
-    return db.create_conversation(title=data.title, system_prompt=data.system_prompt, model=data.model)
+    return db.create_conversation(title=data.title, system_prompt=data.system_prompt, model=data.model, folder_id=data.folder_id or "")
 
 @app.get("/api/conversations/{conv_id}")
 def get_conversation_detail(conv_id: str):
@@ -175,7 +212,7 @@ def get_conversation_detail(conv_id: str):
 
 @app.put("/api/conversations/{conv_id}")
 def update_conversation(conv_id: str, data: ConversationUpdate):
-    db.update_conversation(conv_id, title=data.title, system_prompt=data.system_prompt, model=data.model)
+    db.update_conversation(conv_id, title=data.title, system_prompt=data.system_prompt, model=data.model, folder_id=data.folder_id)
     return db.get_conversation(conv_id)
 
 @app.delete("/api/conversations/{conv_id}")
@@ -184,7 +221,7 @@ def delete_conversation(conv_id: str):
     db.delete_conversation(conv_id)
     return {"status": "success"}
 
-# --- MEMÓRIA DE LONGO PRAZO AUTO-EVOLUTIVA (v5.0) ---
+# Memória de Longo Prazo
 @app.get("/api/memories")
 def list_memories():
     return db.get_all_memories()
@@ -262,7 +299,7 @@ def delete_attached_document(conv_id: str, doc_id: str):
     db.delete_document_record(doc_id)
     return {"status": "success"}
 
-# Chat Streaming SSE com Modo Equipe de IAs (Multi-Agent), Memória de Longo Prazo e RAG
+# Chat Streaming SSE
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest):
     conv_id = request.conversation_id
@@ -276,12 +313,11 @@ async def chat_stream(request: ChatRequest):
     conv = db.get_conversation(conv_id)
     base_sys_prompt = request.system_prompt or (conv["system_prompt"] if conv else "")
     
-    # Auto-Detecção de Nova Memória a partir do Prompt
+    # Auto-Detecção de Nova Memória
     if "lembre-se que" in prompt.lower() or "minha preferência é" in prompt.lower():
         mem_val = prompt
         db.add_memory(memory_key="Preferencia_Usuario", memory_value=mem_val, category="Perfil")
 
-    # Injeção da Memória de Longo Prazo no System Prompt
     user_memories = db.get_all_memories()
     memory_context = ""
     if user_memories:
@@ -289,7 +325,6 @@ async def chat_stream(request: ChatRequest):
         for m in user_memories:
             memory_context += f"- [{m['category']}] {m['memory_key']}: {m['memory_value']}\n"
 
-    # RAG de Documentos
     relevant_chunks = rag.search_relevant_chunks(conv_id, prompt, top_k=4)
     sources = []
     context_str = ""
@@ -305,7 +340,6 @@ async def chat_stream(request: ChatRequest):
             })
             context_str += f"--- Documento [{chunk['filename']}] (Trecho {i}) ---\n{chunk['text']}\n\n"
 
-    # Live Web Scraper
     web_sources = []
     if request.web_search and prompt:
         search_results = web_search.search_web(prompt, max_results=3, deep_scrape=True)

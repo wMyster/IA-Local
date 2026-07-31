@@ -12,6 +12,7 @@ let isMultiAgentEnabled = false;
 let isArenaModeActive = false;
 let currentUtterance = null;
 let allConversations = [];
+let allFolders = [];
 let selectedBase64Images = [];
 let openTabs = [];
 
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMermaid();
     checkOllamaStatus();
     loadAvailableModels();
-    loadConversationsList();
+    loadFoldersAndConversations();
     loadMemoriesCount();
     initTheme();
     loadSavedSettings();
@@ -179,10 +180,163 @@ function useTemplate(promptText) {
     input.style.height = Math.min(input.scrollHeight, 160) + 'px';
 }
 
+// PASTAS / PROJETOS SANFONADOS (v8.0)
+async function loadFoldersAndConversations() {
+    try {
+        const [fRes, cRes] = await Promise.all([
+            fetch('/api/folders'),
+            fetch('/api/conversations')
+        ]);
+        allFolders = await fRes.json();
+        allConversations = await cRes.json();
+
+        renderFoldersAndConversations();
+    } catch (e) {
+        console.error('Erro ao carregar pastas e conversas:', e);
+    }
+}
+
+function renderFoldersAndConversations() {
+    const folderContainer = document.getElementById('folders-container');
+    const convContainer = document.getElementById('conversations-list');
+    folderContainer.innerHTML = '';
+    convContainer.innerHTML = '';
+
+    // Renderizar Pastas
+    allFolders.forEach(folder => {
+        const folderDiv = document.createElement('div');
+        folderDiv.className = 'folder-item';
+        
+        const chatsInFolder = allConversations.filter(c => c.folder_id === folder.id);
+
+        folderDiv.innerHTML = `
+            <div class="folder-header" onclick="toggleFolderCollapse('${folder.id}')">
+                <div class="folder-title">
+                    <i class="fa-solid fa-folder"></i>
+                    <span>${escapeHtml(folder.name)} (${chatsInFolder.length})</span>
+                </div>
+                <i class="fa-solid fa-chevron-down" id="folder-arrow-${folder.id}"></i>
+            </div>
+            <div class="folder-chats collapsed" id="folder-chats-${folder.id}">
+                <!-- Chats dentro da pasta -->
+            </div>
+        `;
+        folderContainer.appendChild(folderDiv);
+
+        const subContainer = folderDiv.querySelector(`#folder-chats-${folder.id}`);
+        chatsInFolder.forEach(conv => {
+            subContainer.appendChild(createConvElement(conv));
+        });
+    });
+
+    // Renderizar Chats sem pasta
+    const unassignedChats = allConversations.filter(c => !c.folder_id);
+    unassignedChats.forEach(conv => {
+        convContainer.appendChild(createConvElement(conv));
+    });
+}
+
+function toggleFolderCollapse(folderId) {
+    const el = document.getElementById(`folder-chats-${folderId}`);
+    const arrow = document.getElementById(`folder-arrow-${folderId}`);
+    if (el) {
+        el.classList.toggle('collapsed');
+        arrow.className = el.classList.contains('collapsed') ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up';
+    }
+}
+
+function createConvElement(conv) {
+    const item = document.createElement('div');
+    item.className = `conv-item ${conv.id === currentConversationId ? 'active' : ''}`;
+    item.dataset.id = conv.id;
+    item.onclick = () => loadConversation(conv.id);
+
+    item.innerHTML = `
+        <div class="conv-title">
+            <i class="fa-regular fa-message"></i>
+            <span>${escapeHtml(conv.title)}</span>
+        </div>
+        <div class="conv-actions">
+            <button class="conv-action-btn" onclick="deleteConv(event, '${conv.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+        </div>
+    `;
+    return item;
+}
+
+async function createNewFolder() {
+    const name = prompt('Digite o nome da nova pasta / projeto:');
+    if (!name || !name.trim()) return;
+
+    try {
+        await fetch('/api/folders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name.trim() })
+        });
+        await loadFoldersAndConversations();
+    } catch (e) {
+        alert('Erro ao criar pasta.');
+    }
+}
+
+// FAVORITOS (v8.0)
+async function toggleFavorite(msgId, btnEl) {
+    try {
+        const res = await fetch(`/api/messages/${msgId}/favorite`, { method: 'POST' });
+        const data = await res.json();
+        if (data.is_favorite) {
+            btnEl.classList.add('active');
+            btnEl.title = 'Remover dos Favoritos';
+        } else {
+            btnEl.classList.remove('active');
+            btnEl.title = 'Adicionar aos Favoritos';
+        }
+    } catch (e) {
+        alert('Erro ao alterar favorito.');
+    }
+}
+
+async function openFavoritesModal() {
+    document.getElementById('favorites-modal').classList.remove('hidden');
+    const container = document.getElementById('favorites-list');
+    container.innerHTML = 'Carregando favoritos...';
+
+    try {
+        const res = await fetch('/api/favorites');
+        const list = await res.json();
+        container.innerHTML = '';
+
+        if (!list || list.length === 0) {
+            container.innerHTML = '<div class="text-muted" style="padding: 10px;">Nenhuma mensagem favoritada ainda. Clique na estrela ⭐ de qualquer mensagem no chat para guardar!</div>';
+            return;
+        }
+
+        list.forEach(msg => {
+            const item = document.createElement('div');
+            item.className = 'fav-item';
+            item.innerHTML = `
+                <div class="fav-meta">
+                    <span><i class="fa-regular fa-message"></i> Chat: <strong>${escapeHtml(msg.conversation_title)}</strong></span>
+                    <span>${new Date(msg.timestamp).toLocaleString('pt-BR')}</span>
+                </div>
+                <div class="fav-text">${marked.parse(msg.content)}</div>
+            `;
+            container.appendChild(item);
+        });
+    } catch (e) {
+        container.innerHTML = 'Erro ao carregar favoritos.';
+    }
+}
+
 // EVENT LISTENERS
 function setupEventListeners() {
     document.getElementById('btn-new-chat').addEventListener('click', createNewChat);
     document.getElementById('btn-add-tab').addEventListener('click', createNewChat);
+    document.getElementById('btn-new-folder').addEventListener('click', createNewFolder);
+    document.getElementById('btn-open-favorites').addEventListener('click', openFavoritesModal);
+    document.getElementById('btn-close-favorites-modal').addEventListener('click', () => {
+        document.getElementById('favorites-modal').classList.add('hidden');
+    });
 
     document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
         document.getElementById('sidebar').classList.toggle('collapsed');
@@ -196,7 +350,7 @@ function setupEventListeners() {
         updateThemeIcon(newTheme);
     });
 
-    // Toggle Arena de Modelos (Lado a Lado)
+    // Toggle Arena de Modelos
     const arenaBtn = document.getElementById('btn-toggle-arena');
     const singleSelector = document.getElementById('single-model-selector');
     const arenaSelectors = document.getElementById('arena-model-selectors');
@@ -255,7 +409,7 @@ function setupEventListeners() {
     document.getElementById('btn-add-memory').addEventListener('click', saveNewMemory);
 
     document.getElementById('history-search-input').addEventListener('input', (e) => {
-        filterConversations(e.target.value);
+        filterConversationsAndMessages(e.target.value);
     });
 
     document.getElementById('select-model').addEventListener('change', (e) => {
@@ -740,52 +894,20 @@ async function startModelPull() {
     }
 }
 
-// CONVERSAS & HISTÓRICO
-async function loadConversationsList() {
-    try {
-        const res = await fetch('/api/conversations');
-        allConversations = await res.json();
-        renderConversations(allConversations);
-    } catch (err) {
-        console.error('Erro ao carregar conversas:', err);
-    }
-}
-
-function filterConversations(query) {
+// BUSCA AVANÇADA DE HISTÓRICO E MENSAGENS (v8.0)
+function filterConversationsAndMessages(query) {
     const q = query.toLowerCase().trim();
     if (!q) {
-        renderConversations(allConversations);
+        renderFoldersAndConversations();
         return;
     }
-    const filtered = allConversations.filter(c => c.title.toLowerCase().includes(q));
-    renderConversations(filtered);
-}
 
-function renderConversations(conversations) {
+    const filtered = allConversations.filter(c => c.title.toLowerCase().includes(q));
     const container = document.getElementById('conversations-list');
     container.innerHTML = '';
-
-    if (conversations.length === 0) {
-        container.innerHTML = '<div style="padding: 10px; font-size: 12px; color: var(--text-muted);">Nenhuma conversa encontrada.</div>';
-        return;
-    }
-
-    conversations.forEach(conv => {
-        const item = document.createElement('div');
-        item.className = `conv-item ${conv.id === currentConversationId ? 'active' : ''}`;
-        item.dataset.id = conv.id;
-        item.onclick = () => loadConversation(conv.id);
-
-        item.innerHTML = `
-            <div class="conv-title">
-                <i class="fa-regular fa-message"></i>
-                <span>${escapeHtml(conv.title)}</span>
-            </div>
-            <div class="conv-actions">
-                <button class="conv-action-btn" onclick="deleteConv(event, '${conv.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
-            </div>
-        `;
-        container.appendChild(item);
+    
+    filtered.forEach(conv => {
+        container.appendChild(createConvElement(conv));
     });
 }
 
@@ -803,24 +925,24 @@ function renderWelcomeScreen() {
             <div class="welcome-icon">
                 <i class="fa-solid fa-robot"></i>
             </div>
-            <h1>IA Universal v7.0 (Masterpiece Edition)</h1>
-            <p>Monitor de Hardware PC 📊, Arena de Modelos ⚔️, Criador de Slides HTML5 🎬, Modo Equipe 🎭 e Memória Auto-Evolutiva 🧠!</p>
+            <h1>IA Universal v8.0 (Omni Edition)</h1>
+            <p>Pastas & Projetos 📁, Mensagens Favoritas ⭐, Gráficos Chart.js 📊, Arena de Modelos ⚔️ e Monitor de Hardware 💻!</p>
             
             <div class="feature-cards">
-                <div class="card" onclick="document.getElementById('btn-toggle-arena').click()">
-                    <i class="fa-solid fa-swords"></i>
-                    <h4>Arena de Modelos Lado a Lado ⚔️</h4>
-                    <p>Compare 2 IAs ao vivo na mesma tela com métricas de velocidade paralelas.</p>
+                <div class="card" onclick="document.getElementById('btn-new-folder').click()">
+                    <i class="fa-solid fa-folder-plus"></i>
+                    <h4>Pastas & Projetos 📁</h4>
+                    <p>Organize suas conversas em categorias e acordeões sanfonados na Sidebar.</p>
                 </div>
-                <div class="card" onclick="useTemplate('Crie uma apresentação de slides interativa em HTML/CSS sobre Inteligência Artificial com 4 slides navegáveis por setas.')">
-                    <i class="fa-solid fa-film"></i>
-                    <h4>Criador de Slides HTML5 🎬</h4>
-                    <p>Gere apresentações de slides interativas com navegação e preview ao vivo.</p>
+                <div class="card" onclick="document.getElementById('btn-open-favorites').click()">
+                    <i class="fa-solid fa-star"></i>
+                    <h4>Mensagens Favoritas ⭐</h4>
+                    <p>Guarde respostas vitais e blocos de código em um painel rápido de 1 clique.</p>
                 </div>
-                <div class="card" onclick="document.getElementById('btn-toggle-multiagent').click()">
-                    <i class="fa-solid fa-users-gear"></i>
-                    <h4>Modo Equipe de IAs 🎭</h4>
-                    <p>3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) em colaboração encadeada.</p>
+                <div class="card" onclick="useTemplate('Crie uma tabela e dados para um gráfico Chart.js comparando o uso de linguagens de programação Python, JS, C++ e Rust em 2026.')">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <h4>Gráficos Estatísticos Chart.js 📊</h4>
+                    <p>Geração gráfica dinâmica de pizza, barras e linhas para seus dados.</p>
                 </div>
             </div>
 
@@ -828,7 +950,7 @@ function renderWelcomeScreen() {
                 <div class="templates-label"><i class="fa-solid fa-bolt"></i> Prompts Rápidos de Alta Produtividade:</div>
                 <div class="template-chips-container">
                     <button class="template-chip" onclick="useTemplate('Crie uma landing page profissional completa em HTML, CSS e JS estilo dark mode.')"><i class="fa-solid fa-code"></i> Landing Page HTML/CSS</button>
-                    <button class="template-chip" onclick="useTemplate('Crie uma apresentação de slides interativa em HTML/CSS sobre Inteligência Artificial com 4 slides navegáveis.')"><i class="fa-solid fa-film"></i> Slides HTML5 Interativos</button>
+                    <button class="template-chip" onclick="useTemplate('Crie uma apresentação de slides interativa em HTML/CSS sobre IA com 4 slides navegáveis.')"><i class="fa-solid fa-film"></i> Slides HTML5 Interativos</button>
                     <button class="template-chip" onclick="useTemplate('Analise o código a seguir, encontre possíveis bugs e sugira melhorias de performance:')"><i class="fa-solid fa-bug"></i> Auditoria de Código</button>
                     <button class="template-chip" onclick="useTemplate('Crie um resumo de estudos estruturado em tópicos e flashcards para memorização sobre:')"><i class="fa-solid fa-graduation-cap"></i> Resumo em Flashcards</button>
                 </div>
@@ -882,7 +1004,7 @@ async function deleteConv(event, convId) {
     try {
         await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
         removeTab(convId, null);
-        await loadConversationsList();
+        await loadFoldersAndConversations();
     } catch (err) {
         console.error('Erro ao deletar conversa:', err);
     }
@@ -978,7 +1100,7 @@ async function deleteDocument(docId) {
     }
 }
 
-// MENSAGENS, STREAMING, LIVE CODE PREVIEW E DIAGRAMAS MERMAID
+// MENSAGENS, STREAMING, LIVE CODE PREVIEW, DIAGRAMAS MERMAID E CHART.JS
 function renderMessages(messages) {
     const container = document.getElementById('messages-container');
     container.innerHTML = '';
@@ -989,13 +1111,13 @@ function renderMessages(messages) {
     }
 
     messages.forEach(msg => {
-        appendMessageUI(msg.role, msg.content, msg.sources);
+        appendMessageUI(msg.role, msg.content, msg.sources, null, msg.id, msg.is_favorite);
     });
 
     scrollToBottom();
 }
 
-function appendMessageUI(role, content, sources = [], metrics = null) {
+function appendMessageUI(role, content, sources = [], metrics = null, msgId = null, isFavorite = false) {
     const container = document.getElementById('messages-container');
     
     const welcome = container.querySelector('#welcome-screen');
@@ -1022,10 +1144,16 @@ function appendMessageUI(role, content, sources = [], metrics = null) {
     let toolbarHtml = '';
     if (role === 'assistant') {
         const metricsStr = metrics ? `⚡ ${metrics.tokens_per_second} t/s (${metrics.elapsed_seconds}s, ${metrics.tokens} tokens)` : '⚡ Resposta instantânea';
+        const starClass = isFavorite ? 'active' : '';
+        const starTitle = isFavorite ? 'Remover dos Favoritos' : 'Adicionar aos Favoritos';
+        
         toolbarHtml = `
             <div class="message-footer-toolbar">
                 <span class="metrics-badge">${metricsStr}</span>
-                <button class="speech-btn" onclick="toggleSpeech(this)" title="Ouvir resposta por voz"><i class="fa-solid fa-volume-high"></i> Ouvir</button>
+                <div>
+                    ${msgId ? `<button class="favorite-star-btn ${starClass}" title="${starTitle}" onclick="toggleFavorite('${msgId}', this)"><i class="fa-solid fa-star"></i></button>` : ''}
+                    <button class="speech-btn" onclick="toggleSpeech(this)" title="Ouvir resposta por voz"><i class="fa-solid fa-volume-high"></i> Ouvir</button>
+                </div>
             </div>
         `;
     }
@@ -1042,8 +1170,37 @@ function appendMessageUI(role, content, sources = [], metrics = null) {
     container.appendChild(row);
     formatCodeBlocks(row);
     renderMermaidDiagrams(row);
+    renderChartJs(row);
     scrollToBottom();
     return row;
+}
+
+// GRÁFICOS ESTATÍSTICOS CHART.JS (v8.0)
+function renderChartJs(container) {
+    if (!window.Chart) return;
+
+    container.querySelectorAll('pre code.language-chart, pre code.language-json').forEach((block) => {
+        const parent = block.parentElement;
+        if (parent.dataset.renderedChart) return;
+
+        try {
+            const chartData = JSON.parse(block.innerText.trim());
+            if (chartData.type && chartData.data) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'chart-container';
+                const canvas = document.createElement('canvas');
+                chartDiv.appendChild(canvas);
+                parent.replaceWith(chartDiv);
+                chartDiv.dataset.renderedChart = 'true';
+
+                new Chart(canvas, {
+                    type: chartData.type,
+                    data: chartData.data,
+                    options: chartData.options || { responsive: true, plugins: { legend: { labels: { color: '#f1f5f9' } } } }
+                });
+            }
+        } catch (e) {}
+    });
 }
 
 async function ensureActiveConversation() {
@@ -1062,7 +1219,7 @@ async function ensureActiveConversation() {
         const conv = await res.json();
         currentConversationId = conv.id;
         addTab(conv.id, conv.title);
-        await loadConversationsList();
+        await loadFoldersAndConversations();
         return currentConversationId;
     } catch (err) {
         console.error('Erro ao criar conversa inicial:', err);
@@ -1137,7 +1294,7 @@ async function sendMessage() {
     isStreaming = false;
     activeAbortController = null;
     updateSendButtonUI(false);
-    loadConversationsList();
+    loadFoldersAndConversations();
     loadMemoriesCount();
 }
 
@@ -1191,6 +1348,7 @@ async function streamSingleModel(prompt, rawImages) {
                             textElement.innerHTML = marked.parse(fullReply);
                             formatCodeBlocks(assistantRow);
                             renderMermaidDiagrams(assistantRow);
+                            renderChartJs(assistantRow);
                             scrollToBottom();
                         } else if (payload.type === 'metrics') {
                             metrics = payload.metrics;
@@ -1201,7 +1359,7 @@ async function streamSingleModel(prompt, rawImages) {
                         } else if (payload.type === 'title_update') {
                             document.getElementById('current-chat-title').innerText = payload.title;
                             addTab(currentConversationId, payload.title);
-                            loadConversationsList();
+                            loadFoldersAndConversations();
                         }
                     } catch (e) {}
                 }
@@ -1289,6 +1447,7 @@ async function streamArenaModels(prompt, rawImages) {
                                 targetTextEl.innerHTML = marked.parse(fullReply);
                                 formatCodeBlocks(arenaRow);
                                 renderMermaidDiagrams(arenaRow);
+                                renderChartJs(arenaRow);
                                 scrollToBottom();
                             } else if (payload.type === 'metrics') {
                                 const m = payload.metrics;

@@ -1,22 +1,24 @@
-# 🧠 IA Universal v7.0 (Masterpiece Edition) - IA Local, Hardware & Slides
+# 🧠 IA Universal v8.0 (Omni Edition) - IA Local Definitiva
 
 Uma plataforma moderna de Inteligência Artificial **100% Gratuita, de Código Aberto e 100% Offline** (com opção de **Live Web Scraper em Tempo Real**). 
 
-Desenvolvida em **Python (FastAPI)** com interface web estilo Glassmorphism, busca semântica em documentos (RAG), suporte à visão por imagem, pré-visualização de código ao vivo, entrada por voz (microfone), **Modo Equipe de IAs (Multi-Agent)**, **Memória Auto-Evolutiva de Longo Prazo**, **Arena de Comparação de 2 Modelos**, **Diagramas Mermaid.js ao vivo**, **Criador de Slides HTML5** e **Monitor de Recursos de Hardware do PC em Tempo Real**. Empacotada em um **arquivo executável `.exe` único e portátil para Windows**.
+Desenvolvida em **Python (FastAPI)** com interface web estilo Glassmorphism, busca semântica em documentos (RAG), suporte à visão por imagem, pré-visualização de código ao vivo, entrada por voz (microfone), **Modo Equipe de IAs (Multi-Agent)**, **Memória Auto-Evolutiva de Longo Prazo**, **Arena de Comparação de 2 Modelos**, **Diagramas Mermaid.js**, **Gráficos Chart.js**, **Pastas Sanfonadas de Projetos**, **Marcador de Mensagens Favoritas** e **Monitor de Recursos de Hardware do PC em Tempo Real**. Empacotada em um **arquivo executável `.exe` único e portátil para Windows**.
 
 ---
 
-## 🌟 Recursos de Alto Nível da Versão 7.0 (Masterpiece Edition)
+## 🌟 O que há de novo no Mega Pacote v8.0 (Omni Edition)
 
-- 📊 **Monitor de Recursos de Hardware em Tempo Real**: Medidor de consumo de CPU (%) e Memória RAM (GB e %) exibido ao vivo no rodapé da Sidebar.
-- 🎬 **Criador de Apresentações de Slides HTML5**: Geração de apresentações estilo PowerPoint/Reveal.js com preview interativo e navegação por setas (`←` e `→`).
-- ⚔️ **Arena de Comparação de Modelos Lado a Lado**: Compare 2 IAs ao vivo na mesma tela dividida em 2 colunas com velocidade em tempo real.
-- 📊 **Renderizador de Diagramas Mermaid.js ao Vivo**: Geração gráfica instantânea de fluxogramas e mapas mentais.
-- ⚡ **Central de Templates de Prompts Rápidos**: Prompts de 1 clique para Landing Pages, Slides HTML5, Auditoria de Código e Flashcards de Estudo.
-- 🎭 **Modo Equipe de IAs (Multi-Agent Workflow)**: 3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) colaborando em cadeia.
-- 🧠 **Memória de Longo Prazo Auto-Evolutiva**: A IA aprende seu perfil, regras e preferências e guarda no banco SQLite para todas as futuras conversas.
-- 🎤 **Entrada por Voz (Speech-to-Text)**: Fale suas perguntas pelo microfone com transcrição em tempo real (`Alt + M`).
-- 📦 **Executável Único Portátil (`IALocal.exe`)**: Empacotado em um único arquivo sem pastas externas. Não requer Python instalado no computador de destino.
+- 📁 **Pastas & Projetos Sanfonados**: Crie pastas customizadas e organize suas conversas por categorias e projetos na Sidebar.
+- ⭐ **Mensagens Favoritas (Bookmarks)**: Marque respostas cruciais e códigos com estrela (`⭐`) e acesse tudo em um painel rápido de 1 clique.
+- 📊 **Gráficos Estatísticos Chart.js ao Vivo**: A IA gera gráficos visuais interativos de pizza, barras e linhas diretamente na conversa.
+- 🔍 **Busca Completa no Conteúdo de Mensagens**: Pesquise palavras-chave no texto de mensagens antigas em todo o banco SQLite.
+- 💻 **Monitor de Recursos de Hardware do PC em Tempo Real**: Medidor de consumo de CPU (%) e Memória RAM (GB e %) atualizado ao vivo a cada 3s.
+- ⚔️ **Arena de Comparação de Modelos Lado a Lado**: Compare 2 IAs ao vivo na mesma tela dividida em 2 colunas.
+- 📊 **Diagramas Mermaid.js ao Vivo**: Geração gráfica de fluxogramas e mapas mentais.
+- 🎭 **Modo Equipe de IAs (Multi-Agent Workflow)**: 3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) em colaboração.
+- 🧠 **Memória de Longo Prazo Auto-Evolutiva**: A IA aprende seu perfil e preferências automaticamente.
+- 🎤 **Entrada por Voz (Speech-to-Text)**: Fale suas perguntas pelo microfone (`Alt + M`).
+- 📦 **Executável Único Portátil (`IALocal.exe`)**: Empacotado em um único arquivo sem pastas externas.
 
 ---
 
