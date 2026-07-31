@@ -15,7 +15,7 @@ import web_search
 
 OLLAMA_URL = "http://localhost:11434"
 
-app = FastAPI(title="IA Local Offline & Web Search v2.0", version="2.0.0")
+app = FastAPI(title="IA Local & Web Search v3.0", version="3.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +46,8 @@ class ChatRequest(BaseModel):
     model: str
     system_prompt: Optional[str] = None
     web_search: Optional[bool] = False
+    images: Optional[List[str]] = None
+    options: Optional[Dict[str, Any]] = None
 
 class PullModelRequest(BaseModel):
     model_name: str
@@ -81,7 +83,7 @@ async def list_models():
         print(f"Erro ao obter modelos do Ollama: {e}")
         
     return {
-        "models": ["deepseek-r1:7b", "qwen2.5:7b", "llama3.2:3b", "qwen2.5:3b", "gemma2:2b"],
+        "models": ["deepseek-r1:7b", "qwen2.5:7b", "llama3.2:3b", "qwen2.5:3b", "gemma2:2b", "llava:7b"],
         "ollama_online": False
     }
 
@@ -227,15 +229,15 @@ def delete_attached_document(conv_id: str, doc_id: str):
     db.delete_document_record(doc_id)
     return {"status": "success"}
 
-# Chat Streaming SSE com RAG, Web Search e Métricas
+# Chat Streaming SSE com RAG, Live Web Scraper, Visão Multimodal e Parâmetros
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest):
     conv_id = request.conversation_id
     prompt = request.prompt.strip()
     model = request.model.strip()
     
-    if not prompt:
-        raise HTTPException(status_code=400, detail="O prompt não pode estar vazio.")
+    if not prompt and not request.images:
+        raise HTTPException(status_code=400, detail="O prompt ou imagem é obrigatório.")
         
     db.add_message(conv_id, role="user", content=prompt)
 
@@ -258,16 +260,16 @@ async def chat_stream(request: ChatRequest):
             })
             context_str += f"--- Documento [{chunk['filename']}] (Trecho {i}) ---\n{chunk['text']}\n\n"
 
-    # 2. Pesquisa Web em Tempo Real (opcional)
+    # 2. Pesquisa Web e Live Web Scraper (tempo real)
     web_sources = []
-    if request.web_search:
-        search_results = web_search.search_web(prompt, max_results=4)
+    if request.web_search and prompt:
+        search_results = web_search.search_web(prompt, max_results=3, deep_scrape=True)
         if search_results:
-            context_str += "\n\n=== RESULTADOS DA PESQUISA WEB EM TEMPO REAL ===\n"
+            context_str += "\n\n=== CONTEÚDO EXTRAÍDO DA INTERNET EM TEMPO REAL ===\n"
             for item in search_results:
                 web_sources.append({"type": "web", "title": item["title"], "url": item["url"]})
-                context_str += f"Fonte [{item['title']}] ({item['url']}):\n{item['snippet']}\n\n"
-            context_str += "=== FIM DA PESQUISA WEB ===\n"
+                context_str += f"Fonte: {item['title']} ({item['url']}):\n{item['full_text']}\n\n"
+            context_str += "=== FIM DO CONTEÚDO DA WEB ===\n"
 
     all_sources = sources + web_sources
 
@@ -290,8 +292,12 @@ async def chat_stream(request: ChatRequest):
             }
             if sys_prompt:
                 payload["system"] = sys_prompt
+            if request.images:
+                payload["images"] = request.images
+            if request.options:
+                payload["options"] = request.options
 
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            async with httpx.AsyncClient(timeout=180.0) as client:
                 async with client.stream("POST", f"{OLLAMA_URL}/api/generate", json=payload) as response:
                     if response.status_code != 200:
                         err_msg = f"Erro no Ollama ({response.status_code}). Verifique se o modelo '{model}' está instalado."
@@ -333,7 +339,7 @@ async def chat_stream(request: ChatRequest):
         db.add_message(conv_id, role="assistant", content=full_assistant_reply, sources=all_sources)
         
         all_msgs = db.get_messages(conv_id)
-        if len(all_msgs) <= 2:
+        if len(all_msgs) <= 2 and prompt:
             auto_title = prompt[:35] + ("..." if len(prompt) > 35 else "")
             db.update_conversation(conv_id, title=auto_title)
             yield f"data: {json.dumps({'type': 'title_update', 'title': auto_title})}\n\n"

@@ -8,6 +8,7 @@ let isSpeaking = false;
 let isWebSearchEnabled = false;
 let currentUtterance = null;
 let allConversations = [];
+let selectedBase64Images = [];
 
 const PERSONAS = {
     general: "Você é um assistente virtual útil, preciso e atencioso.",
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAvailableModels();
     loadConversationsList();
     initTheme();
+    loadSavedSettings();
 });
 
 function setupMarkedOptions() {
@@ -62,7 +64,7 @@ function setupEventListeners() {
         updateThemeIcon(newTheme);
     });
 
-    // Toggle Pesquisa Web
+    // Toggle Pesquisa Web / Live Scraper
     const webBtn = document.getElementById('btn-toggle-web');
     const webIndicator = document.getElementById('web-search-indicator');
     webBtn.addEventListener('click', () => {
@@ -70,7 +72,7 @@ function setupEventListeners() {
         webBtn.classList.toggle('active', isWebSearchEnabled);
         if (isWebSearchEnabled) {
             webIndicator.className = 'active';
-            webIndicator.innerHTML = '<i class="fa-solid fa-globe"></i> 🌐 Pesquisa Web Ativada (Grátis em tempo real)';
+            webIndicator.innerHTML = '<i class="fa-solid fa-globe"></i> 🌐 Live Web Scraper Ativado (Tempo Real)';
         } else {
             webIndicator.className = 'text-muted';
             webIndicator.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado';
@@ -101,6 +103,23 @@ function setupEventListeners() {
         }
     });
 
+    // Configurações da IA Modal
+    document.getElementById('btn-settings').addEventListener('click', openSettingsModal);
+    document.getElementById('btn-close-settings-modal').addEventListener('click', closeSettingsModal);
+    document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
+
+    document.getElementById('setting-temperature').addEventListener('input', (e) => {
+        document.getElementById('temp-val').innerText = e.target.value;
+    });
+    document.getElementById('setting-top-p').addEventListener('input', (e) => {
+        document.getElementById('top-p-val').innerText = e.target.value;
+    });
+
+    // Live Code Preview Modal
+    document.getElementById('btn-close-preview-modal').addEventListener('click', () => {
+        document.getElementById('code-preview-modal').classList.add('hidden');
+    });
+
     document.getElementById('btn-edit-prompt').addEventListener('click', openPromptModal);
     document.getElementById('btn-close-modal').addEventListener('click', closePromptModal);
     document.getElementById('btn-save-prompt').addEventListener('click', () => {
@@ -123,6 +142,13 @@ function setupEventListeners() {
     });
     document.addEventListener('click', () => exportMenu.classList.add('hidden'));
 
+    // Upload de Imagens (Visão)
+    document.getElementById('btn-image-upload').addEventListener('click', () => {
+        document.getElementById('image-upload-input').click();
+    });
+    document.getElementById('image-upload-input').addEventListener('change', handleImageUpload);
+
+    // Upload de Documentos (RAG)
     document.getElementById('btn-upload').addEventListener('click', () => {
         document.getElementById('file-upload-input').click();
     });
@@ -143,6 +169,96 @@ function setupEventListeners() {
     });
 
     document.getElementById('btn-refresh-status').addEventListener('click', checkOllamaStatus);
+}
+
+// HIPERPARÂMETROS DA IA
+function loadSavedSettings() {
+    const saved = localStorage.getItem('ia_settings');
+    if (saved) {
+        try {
+            const opts = JSON.parse(saved);
+            if (opts.temperature !== undefined) {
+                document.getElementById('setting-temperature').value = opts.temperature;
+                document.getElementById('temp-val').innerText = opts.temperature;
+            }
+            if (opts.num_ctx !== undefined) {
+                document.getElementById('setting-num-ctx').value = opts.num_ctx;
+            }
+            if (opts.top_p !== undefined) {
+                document.getElementById('setting-top-p').value = opts.top_p;
+                document.getElementById('top-p-val').innerText = opts.top_p;
+            }
+        } catch (e) {}
+    }
+}
+
+function openSettingsModal() {
+    document.getElementById('settings-modal').classList.remove('hidden');
+}
+
+function closeSettingsModal() {
+    document.getElementById('settings-modal').classList.add('hidden');
+}
+
+function saveSettings() {
+    const opts = getAiOptions();
+    localStorage.setItem('ia_settings', JSON.stringify(opts));
+    closeSettingsModal();
+    alert('Configurações da IA salvas com sucesso!');
+}
+
+function getAiOptions() {
+    return {
+        temperature: parseFloat(document.getElementById('setting-temperature').value),
+        num_ctx: parseInt(document.getElementById('setting-num-ctx').value, 10),
+        top_p: parseFloat(document.getElementById('setting-top-p').value)
+    };
+}
+
+// UPLOAD E GESTÃO DE IMAGENS (VISÃO)
+function handleImageUpload(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const dataUrl = evt.target.result;
+            const rawBase64 = dataUrl.split(',')[1];
+            selectedBase64Images.push({ dataUrl: dataUrl, raw: rawBase64 });
+            renderImageChips();
+        };
+        reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+}
+
+function renderImageChips() {
+    const bar = document.getElementById('attached-images-bar');
+    const container = document.getElementById('image-chips-container');
+    container.innerHTML = '';
+
+    if (selectedBase64Images.length === 0) {
+        bar.classList.add('hidden');
+        return;
+    }
+
+    bar.classList.remove('hidden');
+    selectedBase64Images.forEach((imgObj, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'image-chip';
+        chip.innerHTML = `
+            <img src="${imgObj.dataUrl}" alt="Imagem">
+            <span>Imagem ${idx + 1}</span>
+            <i class="fa-solid fa-xmark doc-chip-remove" onclick="removeImage(${idx})"></i>
+        `;
+        container.appendChild(chip);
+    });
+}
+
+function removeImage(idx) {
+    selectedBase64Images.splice(idx, 1);
+    renderImageChips();
 }
 
 // STATUS DO OLLAMA
@@ -257,7 +373,7 @@ async function startModelPull() {
     const input = document.getElementById('pull-model-input');
     const modelName = input.value.trim();
     if (!modelName) {
-        alert('Digite o nome do modelo que deseja baixar (ex: deepseek-r1:7b).');
+        alert('Digite o nome do modelo que deseja baixar (ex: deepseek-r1:7b, llava:7b).');
         return;
     }
 
@@ -380,24 +496,24 @@ function renderWelcomeScreen() {
             <div class="welcome-icon">
                 <i class="fa-solid fa-robot"></i>
             </div>
-            <h1>Inteligência Artificial "Para Todos" v2.0</h1>
-            <p>100% Gratuita, código aberto, sem chaves de API pagas. Funciona Offline e Online!</p>
+            <h1>IA Universal v3.0</h1>
+            <p>100% Gratuita, código aberto, sem APIs pagas. Live Web Scraper, Análise de Imagens e Live Code Preview!</p>
             
             <div class="feature-cards">
-                <div class="card" onclick="setInputPrompt('Como funciona o raciocínio no modelo DeepSeek R1 7B?')">
-                    <i class="fa-solid fa-brain"></i>
-                    <h4>Raciocínio Avançado</h4>
-                    <p>"Como funciona o raciocínio no modelo DeepSeek R1 7B?"</p>
-                </div>
-                <div class="card" onclick="setInputPrompt('Escreva uma função em Python para filtrar dados de uma lista.')">
-                    <i class="fa-solid fa-code"></i>
-                    <h4>Geração de Código</h4>
-                    <p>"Escreva uma função em Python para filtrar dados de uma lista."</p>
-                </div>
-                <div class="card" onclick="document.getElementById('btn-toggle-web').click(); setInputPrompt('Quais são as últimas notícias sobre exploração espacial?')">
+                <div class="card" onclick="document.getElementById('btn-toggle-web').click(); setInputPrompt('Quais são as últimas notícias sobre IA e tecnologia hoje?')">
                     <i class="fa-solid fa-globe"></i>
-                    <h4>Pesquisa Web em Tempo Real</h4>
-                    <p>"Quais são as últimas notícias sobre exploração espacial?"</p>
+                    <h4>Live Web Scraper</h4>
+                    <p>"Quais são as últimas notícias sobre IA e tecnologia hoje?"</p>
+                </div>
+                <div class="card" onclick="setInputPrompt('Crie uma landing page interativa em HTML5, CSS3 e JavaScript com modo dark e botões animados.')">
+                    <i class="fa-solid fa-eye"></i>
+                    <h4>Live Code Preview</h4>
+                    <p>"Crie uma landing page em HTML5/JS para eu ver o Preview ao vivo."</p>
+                </div>
+                <div class="card" onclick="document.getElementById('image-upload-input').click()">
+                    <i class="fa-solid fa-image"></i>
+                    <h4>Análise de Imagens (Visão)</h4>
+                    <p>Anexe uma foto (PNG, JPG) para a IA descrever ou extrair código.</p>
                 </div>
             </div>
         </div>
@@ -535,7 +651,7 @@ async function deleteDocument(docId) {
     }
 }
 
-// MENSAGENS, STREAMING, BOTÃO PARAR E FONTES
+// MENSAGENS, STREAMING, LIVE CODE PREVIEW E VISÃO
 function renderMessages(messages) {
     const container = document.getElementById('messages-container');
     container.innerHTML = '';
@@ -565,7 +681,7 @@ function appendMessageUI(role, content, sources = [], metrics = null) {
 
     let sourcesHtml = '';
     if (sources && sources.length > 0) {
-        sourcesHtml = `<div class="rag-sources"><div class="sources-title"><i class="fa-solid fa-bookmark"></i> Fontes & Contexto Consultados:</div>`;
+        sourcesHtml = `<div class="rag-sources"><div class="sources-title"><i class="fa-solid fa-bookmark"></i> Fontes & Conteúdo em Tempo Real:</div>`;
         sources.forEach(s => {
             if (s.type === 'web') {
                 sourcesHtml += `<a class="source-badge" href="${escapeHtml(s.url)}" target="_blank" title="${escapeHtml(s.url)}"><i class="fa-solid fa-globe"></i> Web: ${escapeHtml(s.title)}</a>`;
@@ -658,7 +774,9 @@ async function sendMessage() {
 
     const input = document.getElementById('chat-input');
     const prompt = input.value.trim();
-    if (!prompt) return;
+    const rawImages = selectedBase64Images.map(img => img.raw);
+
+    if (!prompt && rawImages.length === 0) return;
 
     if (!selectedModel) {
         alert('Por favor, selecione um modelo de IA no topo da tela antes de enviar.');
@@ -672,7 +790,11 @@ async function sendMessage() {
     input.value = '';
     input.style.height = 'auto';
 
-    appendMessageUI('user', prompt);
+    appendMessageUI('user', prompt || "[Imagem Enviada para Análise]");
+
+    // Limpar imagens após envio
+    selectedBase64Images = [];
+    renderImageChips();
 
     const assistantRow = appendMessageUI('assistant', '');
     const textElement = assistantRow.querySelector('.message-text');
@@ -692,10 +814,12 @@ async function sendMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 conversation_id: currentConversationId,
-                prompt: prompt,
+                prompt: prompt || "Descreva e analise esta imagem em detalhes.",
                 model: selectedModel,
                 system_prompt: currentSystemPrompt,
-                web_search: isWebSearchEnabled
+                web_search: isWebSearchEnabled,
+                images: rawImages.length > 0 ? rawImages : null,
+                options: getAiOptions()
             }),
             signal: activeAbortController.signal
         });
@@ -757,6 +881,42 @@ async function sendMessage() {
     }
 }
 
+// LIVE CODE PREVIEW & SINTAXE
+function formatCodeBlocks(container) {
+    container.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
+        
+        const parent = block.parentElement;
+        if (!parent.querySelector('.copy-code-btn')) {
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-code-btn';
+            copyBtn.innerText = 'Copiar';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(block.innerText);
+                copyBtn.innerText = 'Copiado!';
+                setTimeout(() => copyBtn.innerText = 'Copiar', 2000);
+            };
+            parent.appendChild(copyBtn);
+
+            // Adicionar botão de Live Code Preview se for HTML/JS/CSS
+            const codeText = block.innerText.trim();
+            if (codeText.startsWith('<') || codeText.includes('<!DOCTYPE') || codeText.includes('<html') || codeText.includes('<div')) {
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'preview-code-btn';
+                previewBtn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview';
+                previewBtn.onclick = () => openLiveCodePreview(codeText);
+                parent.appendChild(previewBtn);
+            }
+        }
+    });
+}
+
+function openLiveCodePreview(codeContent) {
+    const iframe = document.getElementById('code-preview-iframe');
+    iframe.srcdoc = codeContent;
+    document.getElementById('code-preview-modal').classList.remove('hidden');
+}
+
 // LEITOR POR VOZ
 function toggleSpeech(btn) {
     if (!('speechSynthesis' in window)) {
@@ -786,25 +946,6 @@ function toggleSpeech(btn) {
     window.speechSynthesis.speak(currentUtterance);
     isSpeaking = true;
     btn.innerHTML = '<i class="fa-solid fa-square"></i> Parar';
-}
-
-function formatCodeBlocks(container) {
-    container.querySelectorAll('pre code').forEach((block) => {
-        hljs.highlightElement(block);
-        
-        const parent = block.parentElement;
-        if (!parent.querySelector('.copy-code-btn')) {
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-code-btn';
-            copyBtn.innerText = 'Copiar';
-            copyBtn.onclick = () => {
-                navigator.clipboard.writeText(block.innerText);
-                copyBtn.innerText = 'Copiado!';
-                setTimeout(() => copyBtn.innerText = 'Copiar', 2000);
-            };
-            parent.appendChild(copyBtn);
-        }
-    });
 }
 
 function setInputPrompt(text) {

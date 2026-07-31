@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IA Local & Web Search v2.0 - Para Todos</title>
+    <title>IA Universal v3.0 - Live Web Scraper, Visão & Code Preview</title>
     <!-- Fontes e Ícones -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,8 +29,8 @@
                         <i class="fa-solid fa-brain"></i>
                     </div>
                     <div class="brand-title">
-                        <h2>IA Universal v2.0</h2>
-                        <span class="badge-offline"><i class="fa-solid fa-globe"></i> Offline / Web Search</span>
+                        <h2>IA Universal v3.0</h2>
+                        <span class="badge-offline"><i class="fa-solid fa-globe"></i> Live Web & Visão</span>
                     </div>
                 </div>
                 <button id="btn-new-chat" class="btn-primary w-full">
@@ -46,7 +46,7 @@
 
             <!-- Lista de Histórico de Conversas -->
             <div class="conversations-wrapper">
-                <div class="section-label">HISTÓRICO</div>
+                <div class="section-label">HISTÓRICO DE CHATS</div>
                 <div id="conversations-list" class="conversations-list">
                     <!-- Itens inseridos via JS -->
                 </div>
@@ -100,6 +100,11 @@
                         </select>
                     </div>
 
+                    <!-- Botão de Configurações da IA -->
+                    <button id="btn-settings" class="icon-btn" title="Configurações da IA (Temperatura, Contexto)">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+
                     <!-- Menu Dropdown de Exportação -->
                     <div class="dropdown-wrapper">
                         <button id="btn-export-dropdown" class="icon-btn" title="Exportar Conversa">
@@ -132,27 +137,37 @@
                         <div class="welcome-icon">
                             <i class="fa-solid fa-robot"></i>
                         </div>
-                        <h1>Inteligência Artificial "Para Todos" v2.0</h1>
-                        <p>100% Gratuita, código aberto, sem chaves de API pagas. Funciona Offline e Online!</p>
+                        <h1>IA Universal v3.0</h1>
+                        <p>100% Gratuita, código aberto, sem APIs pagas. Live Web Scraper, Análise de Imagens e Live Code Preview!</p>
                         
                         <div class="feature-cards">
-                            <div class="card" onclick="setInputPrompt('Como funciona o raciocínio no modelo DeepSeek R1 7B?')">
-                                <i class="fa-solid fa-brain"></i>
-                                <h4>Raciocínio Avançado</h4>
-                                <p>"Como funciona o raciocínio no modelo DeepSeek R1 7B?"</p>
-                            </div>
-                            <div class="card" onclick="setInputPrompt('Escreva uma função em Python para filtrar dados de uma lista.')">
-                                <i class="fa-solid fa-code"></i>
-                                <h4>Geração de Código</h4>
-                                <p>"Escreva uma função em Python para filtrar dados de uma lista."</p>
-                            </div>
-                            <div class="card" onclick="document.getElementById('btn-toggle-web').click(); setInputPrompt('Quais são as últimas notícias sobre exploração espacial?')">
+                            <div class="card" onclick="document.getElementById('btn-toggle-web').click(); setInputPrompt('Quais são as últimas notícias sobre IA e tecnologia hoje?')">
                                 <i class="fa-solid fa-globe"></i>
-                                <h4>Pesquisa Web em Tempo Real</h4>
-                                <p>"Quais são as últimas notícias sobre exploração espacial?"</p>
+                                <h4>Live Web Scraper</h4>
+                                <p>"Quais são as últimas notícias sobre IA e tecnologia hoje?"</p>
+                            </div>
+                            <div class="card" onclick="setInputPrompt('Crie uma landing page interativa em HTML5, CSS3 e JavaScript com modo dark e botões animados.')">
+                                <i class="fa-solid fa-eye"></i>
+                                <h4>Live Code Preview</h4>
+                                <p>"Crie uma landing page em HTML5/JS para eu ver o Preview ao vivo."</p>
+                            </div>
+                            <div class="card" onclick="document.getElementById('image-upload-input').click()">
+                                <i class="fa-solid fa-image"></i>
+                                <h4>Análise de Imagens (Visão)</h4>
+                                <p>Anexe uma foto (PNG, JPG) para a IA descrever ou extrair código.</p>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Chips de Imagens Anexadas -->
+            <div id="attached-images-bar" class="attached-docs-bar hidden">
+                <div class="docs-label">
+                    <i class="fa-solid fa-image"></i> Imagens Selecionadas:
+                </div>
+                <div id="image-chips-container" class="docs-chips-container">
+                    <!-- Chips de imagem -->
                 </div>
             </div>
 
@@ -169,21 +184,27 @@
             <!-- Barra Inferior de Entrada de Mensagem -->
             <div class="input-area">
                 <div class="input-wrapper">
-                    <!-- Botão de Upload de Documento -->
-                    <button id="btn-upload" class="input-action-btn" title="Anexar documento (PDF, TXT, DOCX)">
+                    <!-- Upload de Imagem (Visão) -->
+                    <button id="btn-image-upload" class="input-action-btn" title="Anexar Imagem (PNG, JPG, WEBP)">
+                        <i class="fa-solid fa-image"></i>
+                    </button>
+                    <input type="file" id="image-upload-input" accept="image/*" multiple style="display: none;">
+
+                    <!-- Upload de Documento (RAG) -->
+                    <button id="btn-upload" class="input-action-btn" title="Anexar Documento (PDF, TXT, DOCX)">
                         <i class="fa-solid fa-paperclip"></i>
                     </button>
                     <input type="file" id="file-upload-input" accept=".pdf,.txt,.md,.docx,.doc" style="display: none;">
 
-                    <!-- Botão Toggle Pesquisa Web -->
-                    <button id="btn-toggle-web" class="input-action-btn web-btn" title="Ativar/Desativar Pesquisa Web Gratuita">
+                    <!-- Toggle Pesquisa Web em Tempo Real -->
+                    <button id="btn-toggle-web" class="input-action-btn web-btn" title="Ativar/Desativar Live Web Scraper em Tempo Real">
                         <i class="fa-solid fa-globe"></i>
                     </button>
 
                     <!-- Textarea com Auto-height -->
-                    <textarea id="chat-input" placeholder="Pergunte algo, envie um documento ou ative a Pesquisa Web..." rows="1"></textarea>
+                    <textarea id="chat-input" placeholder="Pergunte algo, envie uma imagem, documento ou ative o Live Web Scraper..." rows="1"></textarea>
 
-                    <!-- Botão de Enviar -->
+                    <!-- Botão de Enviar / Parar -->
                     <button id="btn-send" class="input-action-btn send-btn" title="Enviar Mensagem">
                         <i class="fa-solid fa-paper-plane"></i>
                     </button>
@@ -195,15 +216,60 @@
         </main>
     </div>
 
-    <!-- Modal de Edição de System Prompt / Persona -->
+    <!-- Modal de Configurações da IA -->
+    <div id="settings-modal" class="modal-backdrop hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-gear"></i> Configurações da IA (Hiperparâmetros)</h3>
+                <button id="btn-close-settings-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <label><strong>Temperatura (Criatividade vs Precisão): <span id="temp-val">0.7</span></strong></label>
+                    <input type="range" id="setting-temperature" min="0.0" max="1.0" step="0.05" value="0.7">
+                </div>
+                <div class="setting-item mt-16">
+                    <label><strong>Janela de Contexto (`num_ctx`):</strong></label>
+                    <select id="setting-num-ctx" class="custom-select w-full mt-8">
+                        <option value="2048">2048 tokens (Rápido / Menos memória)</option>
+                        <option value="4096" selected>4096 tokens (Padrão equilibrado)</option>
+                        <option value="8192">8192 tokens (Contexto expandido)</option>
+                        <option value="16384">16384 tokens (Máxima memória)</option>
+                    </select>
+                </div>
+                <div class="setting-item mt-16">
+                    <label><strong>Top-P (Amostragem de Nucleus): <span id="top-p-val">0.9</span></strong></label>
+                    <input type="range" id="setting-top-p" min="0.1" max="1.0" step="0.05" value="0.9">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-save-settings" class="btn-primary">Salvar Configurações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Live Code Preview -->
+    <div id="code-preview-modal" class="modal-backdrop hidden">
+        <div class="modal-content glass-card modal-preview">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-eye"></i> Live Code Preview (Execução ao Vivo)</h3>
+                <button id="btn-close-preview-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body preview-body">
+                <iframe id="code-preview-iframe" sandbox="allow-scripts"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição de System Prompt -->
     <div id="prompt-modal" class="modal-backdrop hidden">
         <div class="modal-content glass-card">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-sliders"></i> Prompt de Sistema da Conversa</h3>
+                <h3><i class="fa-solid fa-sliders"></i> Prompt de Sistema</h3>
                 <button id="btn-close-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
-                <p>Defina as instruções de comportamento da IA para a conversa atual:</p>
+                <p>Defina as instruções de comportamento da IA:</p>
                 <textarea id="modal-system-prompt" rows="5" placeholder="Ex: Você é um assistente atencioso..."></textarea>
             </div>
             <div class="modal-footer">
@@ -223,7 +289,7 @@
                 <div class="model-pull-box">
                     <label><strong>Baixar Novo Modelo do Ollama:</strong></label>
                     <div class="input-inline mt-8">
-                        <input type="text" id="pull-model-input" placeholder="Ex: deepseek-r1:7b, qwen2.5:7b, gemma2:2b, mistral:7b">
+                        <input type="text" id="pull-model-input" placeholder="Ex: deepseek-r1:7b, llava:7b, qwen2.5:7b, gemma2:2b">
                         <button id="btn-start-pull" class="btn-primary"><i class="fa-solid fa-download"></i> Baixar Modelo</button>
                     </div>
                     <div id="pull-progress-container" class="progress-container hidden mt-12">

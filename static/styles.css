@@ -171,13 +171,11 @@ body {
     width: 100%;
 }
 
-.mb-12 {
-    margin-bottom: 12px;
-}
-
+.mb-12 { margin-bottom: 12px; }
 .mt-8 { margin-top: 8px; }
 .mt-10 { margin-top: 10px; }
 .mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
 .mt-20 { margin-top: 20px; }
 
 /* Barra de Busca de Histórico */
@@ -612,7 +610,7 @@ body {
     border-bottom-left-radius: 4px;
 }
 
-/* Métricas de Desempenho e Leitor por Voz na Mensagem */
+/* Métricas e Leitor por Voz */
 .message-footer-toolbar {
     display: flex;
     align-items: center;
@@ -702,10 +700,9 @@ body {
     font-size: 13px;
 }
 
-.copy-code-btn {
+.copy-code-btn, .preview-code-btn {
     position: absolute;
     top: 8px;
-    right: 8px;
     background: rgba(255, 255, 255, 0.1);
     color: #ccc;
     border: none;
@@ -715,9 +712,18 @@ body {
     cursor: pointer;
 }
 
-.copy-code-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
+.copy-code-btn {
+    right: 8px;
+}
+
+.preview-code-btn {
+    right: 68px;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.15);
+}
+
+.copy-code-btn:hover, .preview-code-btn:hover {
+    opacity: 0.9;
 }
 
 .cursor-typing::after {
@@ -758,7 +764,7 @@ body {
     flex-wrap: wrap;
 }
 
-.doc-chip {
+.doc-chip, .image-chip {
     background: var(--bg-input);
     border: 1px solid var(--border-color);
     padding: 4px 10px;
@@ -767,6 +773,13 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.image-chip img {
+    width: 24px;
+    height: 24px;
+    object-fit: cover;
+    border-radius: 4px;
 }
 
 .doc-chip-remove {
@@ -834,7 +847,7 @@ body {
     opacity: 0.9;
 }
 
-/* BOTÃO DE PARAR RESPOSTA (STOP BTN) */
+/* BOTÃO PARAR */
 .send-btn.stop-btn {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
     color: #ffffff !important;
@@ -910,6 +923,35 @@ body {
 
 .modal-large {
     max-width: 650px;
+}
+
+.modal-preview {
+    max-width: 90vw;
+    width: 90vw;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-body {
+    flex: 1;
+    padding: 0;
+    overflow: hidden;
+}
+
+#code-preview-iframe {
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.setting-item input[type="range"] {
+    width: 100%;
+    margin-top: 8px;
+    accent-color: var(--accent-primary);
+    cursor: pointer;
 }
 
 .modal-header {
