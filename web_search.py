@@ -1,7 +1,11 @@
 import re
 import httpx
 from typing import List, Dict, Any
-from duckduckgo_search import DDGS
+
+try:
+    from ddgs import DDGS
+except ImportError:
+    from duckduckgo_search import DDGS
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -34,8 +38,8 @@ def search_web(query: str, max_results: int = 3, deep_scrape: bool = True) -> Li
         with DDGS() as ddgs:
             raw_results = list(ddgs.text(query, max_results=max_results))
             for item in raw_results:
-                url = item.get("href", "")
-                snippet = item.get("body", "")
+                url = item.get("href", "") or item.get("link", "")
+                snippet = item.get("body", "") or item.get("snippet", "")
                 title = item.get("title", "")
                 
                 full_text = snippet
@@ -51,5 +55,5 @@ def search_web(query: str, max_results: int = 3, deep_scrape: bool = True) -> Li
                     "url": url
                 })
     except Exception as e:
-        print(f"[AVISO] Erro na busca Web (DuckDuckGo): {e}")
+        print(f"[AVISO] Erro na busca Web: {e}")
     return results
