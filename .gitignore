@@ -1,0 +1,24 @@
+# Ambiente Virtual e Cache
+.venv/
+venv/
+ENV/
+__pycache__/
+*.pyc
+
+# Arquivos de Compilação PyInstaller / Executáveis
+build/
+dist/
+*.spec
+
+# Banco de Dados Local e Uploads
+*.db
+*.sqlite
+uploads/
+models/
+*.gguf
+
+# IDEs e Sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

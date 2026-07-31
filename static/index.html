@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA Local & Web Search v2.0 - Para Todos</title>
+    <!-- Fontes e Ícones -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Highlight.js para Sintaxe de Código -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css" id="hljs-theme">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+    <!-- Marked.js para Renderização de Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <div class="brand-title">
+                        <h2>IA Universal v2.0</h2>
+                        <span class="badge-offline"><i class="fa-solid fa-globe"></i> Offline / Web Search</span>
+                    </div>
+                </div>
+                <button id="btn-new-chat" class="btn-primary w-full">
+                    <i class="fa-solid fa-plus"></i> Novo Chat
+                </button>
+            </div>
+
+            <!-- Campo de Pesquisa no Histórico -->
+            <div class="search-box-wrapper">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="history-search-input" placeholder="Pesquisar conversas..." autocomplete="off">
+            </div>
+
+            <!-- Lista de Histórico de Conversas -->
+            <div class="conversations-wrapper">
+                <div class="section-label">HISTÓRICO</div>
+                <div id="conversations-list" class="conversations-list">
+                    <!-- Itens inseridos via JS -->
+                </div>
+            </div>
+
+            <!-- Status do Ollama e Botão de Gerenciamento de Modelos -->
+            <div class="sidebar-footer">
+                <button id="btn-manage-models" class="btn-secondary w-full mb-12">
+                    <i class="fa-solid fa-download"></i> Gerenciar Modelos
+                </button>
+
+                <div id="ollama-status-card" class="status-card offline">
+                    <div class="status-indicator"></div>
+                    <div class="status-info">
+                        <span id="ollama-status-text" class="status-title">Verificando Ollama...</span>
+                        <span id="ollama-status-detail" class="status-sub">localhost:11434</span>
+                    </div>
+                    <button id="btn-refresh-status" title="Atualizar Status"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Container Principal -->
+        <main class="main-content">
+            <!-- Header Superior -->
+            <header class="top-bar">
+                <div class="left-controls">
+                    <button id="btn-toggle-sidebar" class="icon-btn" title="Alternar Sidebar">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <h3 id="current-chat-title" class="chat-title">Nova Conversa</h3>
+                </div>
+
+                <div class="right-controls">
+                    <!-- Seletor de Modelo -->
+                    <div class="control-group">
+                        <label for="select-model"><i class="fa-solid fa-microchip"></i> Modelo:</label>
+                        <select id="select-model" class="custom-select">
+                            <option value="">Carregando modelos...</option>
+                        </select>
+                    </div>
+
+                    <!-- Seletor de Persona -->
+                    <div class="control-group">
+                        <label for="select-persona"><i class="fa-solid fa-user-gear"></i> Persona:</label>
+                        <select id="select-persona" class="custom-select">
+                            <option value="general">Assistente Geral</option>
+                            <option value="coder">Especialista em Programação</option>
+                            <option value="doc_analyzer">Analista de Documentos</option>
+                            <option value="custom">Prompt Personalizado...</option>
+                        </select>
+                    </div>
+
+                    <!-- Menu Dropdown de Exportação -->
+                    <div class="dropdown-wrapper">
+                        <button id="btn-export-dropdown" class="icon-btn" title="Exportar Conversa">
+                            <i class="fa-solid fa-file-export"></i>
+                        </button>
+                        <div id="export-menu" class="dropdown-menu hidden">
+                            <button onclick="exportCurrentChat('md')"><i class="fa-solid fa-file-lines"></i> Exportar Markdown (.md)</button>
+                            <button onclick="exportCurrentChat('pdf')"><i class="fa-solid fa-file-pdf"></i> Exportar PDF (.pdf)</button>
+                            <button onclick="exportCurrentChat('json')"><i class="fa-solid fa-code"></i> Exportar JSON (.json)</button>
+                        </div>
+                    </div>
+
+                    <!-- Botão do Modal de System Prompt -->
+                    <button id="btn-edit-prompt" class="icon-btn" title="Editar Prompt de Sistema">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+
+                    <!-- Toggle de Tema -->
+                    <button id="btn-theme-toggle" class="icon-btn" title="Alternar Tema Dark/Light">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Área de Mensagens do Chat -->
+            <div class="chat-viewport">
+                <div id="messages-container" class="messages-container">
+                    <!-- Boas-Vindas -->
+                    <div id="welcome-screen" class="welcome-screen">
+                        <div class="welcome-icon">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        <h1>Inteligência Artificial "Para Todos" v2.0</h1>
+                        <p>100% Gratuita, código aberto, sem chaves de API pagas. Funciona Offline e Online!</p>
+                        
+                        <div class="feature-cards">
+                            <div class="card" onclick="setInputPrompt('Como funciona o raciocínio no modelo DeepSeek R1 7B?')">
+                                <i class="fa-solid fa-brain"></i>
+                                <h4>Raciocínio Avançado</h4>
+                                <p>"Como funciona o raciocínio no modelo DeepSeek R1 7B?"</p>
+                            </div>
+                            <div class="card" onclick="setInputPrompt('Escreva uma função em Python para filtrar dados de uma lista.')">
+                                <i class="fa-solid fa-code"></i>
+                                <h4>Geração de Código</h4>
+                                <p>"Escreva uma função em Python para filtrar dados de uma lista."</p>
+                            </div>
+                            <div class="card" onclick="document.getElementById('btn-toggle-web').click(); setInputPrompt('Quais são as últimas notícias sobre exploração espacial?')">
+                                <i class="fa-solid fa-globe"></i>
+                                <h4>Pesquisa Web em Tempo Real</h4>
+                                <p>"Quais são as últimas notícias sobre exploração espacial?"</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Painel de Documentos Anexados para RAG -->
+            <div id="attached-docs-bar" class="attached-docs-bar hidden">
+                <div class="docs-label">
+                    <i class="fa-solid fa-paperclip"></i> Contexto RAG:
+                </div>
+                <div id="docs-chips-container" class="docs-chips-container">
+                    <!-- Chips de arquivos anexados -->
+                </div>
+            </div>
+
+            <!-- Barra Inferior de Entrada de Mensagem -->
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <!-- Botão de Upload de Documento -->
+                    <button id="btn-upload" class="input-action-btn" title="Anexar documento (PDF, TXT, DOCX)">
+                        <i class="fa-solid fa-paperclip"></i>
+                    </button>
+                    <input type="file" id="file-upload-input" accept=".pdf,.txt,.md,.docx,.doc" style="display: none;">
+
+                    <!-- Botão Toggle Pesquisa Web -->
+                    <button id="btn-toggle-web" class="input-action-btn web-btn" title="Ativar/Desativar Pesquisa Web Gratuita">
+                        <i class="fa-solid fa-globe"></i>
+                    </button>
+
+                    <!-- Textarea com Auto-height -->
+                    <textarea id="chat-input" placeholder="Pergunte algo, envie um documento ou ative a Pesquisa Web..." rows="1"></textarea>
+
+                    <!-- Botão de Enviar -->
+                    <button id="btn-send" class="input-action-btn send-btn" title="Enviar Mensagem">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="input-footer-note">
+                    <span id="web-search-indicator" class="text-muted"><i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Edição de System Prompt / Persona -->
+    <div id="prompt-modal" class="modal-backdrop hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-sliders"></i> Prompt de Sistema da Conversa</h3>
+                <button id="btn-close-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>Defina as instruções de comportamento da IA para a conversa atual:</p>
+                <textarea id="modal-system-prompt" rows="5" placeholder="Ex: Você é um assistente atencioso..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-save-prompt" class="btn-primary">Salvar Prompt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Gerenciamento de Modelos -->
+    <div id="models-modal" class="modal-backdrop hidden">
+        <div class="modal-content glass-card modal-large">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-cloud-arrow-down"></i> Gerenciador de Modelos</h3>
+                <button id="btn-close-models-modal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="model-pull-box">
+                    <label><strong>Baixar Novo Modelo do Ollama:</strong></label>
+                    <div class="input-inline mt-8">
+                        <input type="text" id="pull-model-input" placeholder="Ex: deepseek-r1:7b, qwen2.5:7b, gemma2:2b, mistral:7b">
+                        <button id="btn-start-pull" class="btn-primary"><i class="fa-solid fa-download"></i> Baixar Modelo</button>
+                    </div>
+                    <div id="pull-progress-container" class="progress-container hidden mt-12">
+                        <div class="progress-info">
+                            <span id="pull-status-text">Iniciando download...</span>
+                            <span id="pull-percent-text">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div id="pull-progress-bar" class="progress-bar-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="installed-models-box mt-20">
+                    <label><strong>Modelos Instalados no Computador:</strong></label>
+                    <div id="installed-models-list" class="installed-models-list mt-10">
+                        <!-- Itens via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

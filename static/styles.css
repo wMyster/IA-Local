@@ -1,0 +1,15 @@
+/* WEB SEARCH TOGGLE BUTTON */
+.web-btn {
+    color: var(--text-muted);
+}
+
+.web-btn.active {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+#web-search-indicator.active {
+    color: #38bdf8;
+    font-weight: 600;
+}
