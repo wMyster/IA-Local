@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IA Universal v5.0 - Ultra Edition</title>
+    <title>IA Universal v6.0 - Ultimate Edition</title>
     <!-- Fontes e Ícones -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,6 +17,9 @@
     <!-- Marked.js para Renderização de Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+    <!-- Mermaid.js para Diagramas Visuais -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -29,8 +32,8 @@
                         <i class="fa-solid fa-brain"></i>
                     </div>
                     <div class="brand-title">
-                        <h2>IA Universal v5.0</h2>
-                        <span class="badge-offline"><i class="fa-solid fa-crown"></i> Ultra Edition</span>
+                        <h2>IA Universal v6.0</h2>
+                        <span class="badge-offline"><i class="fa-solid fa-fire"></i> Ultimate Edition</span>
                     </div>
                 </div>
                 <button id="btn-new-chat" class="btn-primary w-full">
@@ -88,17 +91,34 @@
                 </div>
 
                 <div class="right-controls">
-                    <!-- Seletor de Modelo -->
-                    <div class="control-group">
+                    <!-- Seletor de Modelo Padrão -->
+                    <div id="single-model-selector" class="control-group">
                         <label for="select-model"><i class="fa-solid fa-microchip"></i> Modelo:</label>
                         <select id="select-model" class="custom-select">
                             <option value="">Carregando modelos...</option>
                         </select>
                     </div>
 
+                    <!-- Seletores da Arena de Modelos (Lado a Lado) -->
+                    <div id="arena-model-selectors" class="control-group hidden">
+                        <label><i class="fa-solid fa-swords"></i> Arena:</label>
+                        <select id="select-model-a" class="custom-select arena-select-a" title="Modelo A">
+                            <option value="">Modelo A...</option>
+                        </select>
+                        <span class="arena-vs">VS</span>
+                        <select id="select-model-b" class="custom-select arena-select-b" title="Modelo B">
+                            <option value="">Modelo B...</option>
+                        </select>
+                    </div>
+
+                    <!-- Botão Toggle Arena de Modelos -->
+                    <button id="btn-toggle-arena" class="btn-secondary arena-top-btn" title="Ativar Arena de Comparação de 2 Modelos Lado a Lado">
+                        <i class="fa-solid fa-swords"></i> ⚔️ Arena
+                    </button>
+
                     <!-- Toggle Modo Equipe de IAs (Multi-Agent) -->
                     <button id="btn-toggle-multiagent" class="btn-secondary multiagent-top-btn" title="Ativar Modo Equipe de 3 IAs (Pesquisador, Criador, Revisor)">
-                        <i class="fa-solid fa-users-gear"></i> 🎭 Modo Equipe
+                        <i class="fa-solid fa-users-gear"></i> 🎭 Equipe
                     </button>
 
                     <!-- Botão Memória Pessoal -->
@@ -146,24 +166,35 @@
                         <div class="welcome-icon">
                             <i class="fa-solid fa-robot"></i>
                         </div>
-                        <h1>IA Universal v5.0 (Ultra Edition)</h1>
-                        <p>Diferenciador único: Modo Equipe de IAs (3 Agentes), Memória Auto-Evolutiva de Longo Prazo, Microfone 🎤 e Live Web Scraper!</p>
+                        <h1>IA Universal v6.0 (Ultimate Edition)</h1>
+                        <p>Arena de Comparação Lado a Lado ⚔️, Diagramas Mermaid.js 📊, Modo Equipe 🎭, Memória Auto-Evolutiva 🧠 e Microfone 🎤!</p>
                         
                         <div class="feature-cards">
+                            <div class="card" onclick="document.getElementById('btn-toggle-arena').click()">
+                                <i class="fa-solid fa-swords"></i>
+                                <h4>Arena de Modelos Lado a Lado ⚔️</h4>
+                                <p>Compare 2 IAs ao vivo na mesma tela com métricas de velocidade paralelas.</p>
+                            </div>
                             <div class="card" onclick="document.getElementById('btn-toggle-multiagent').click()">
                                 <i class="fa-solid fa-users-gear"></i>
                                 <h4>Modo Equipe de IAs 🎭</h4>
-                                <p>3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) colaborando para criar a resposta perfeita.</p>
+                                <p>3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) em colaboração encadeada.</p>
                             </div>
-                            <div class="card" onclick="document.getElementById('btn-open-memories').click()">
-                                <i class="fa-solid fa-brain"></i>
-                                <h4>Memória Auto-Evolutiva 🧠</h4>
-                                <p>A IA aprende seu perfil, regras e preferências e lembra em todas as futuras conversas.</p>
+                            <div class="card" onclick="useTemplate('Crie um diagrama de fluxo Mermaid completo mostrando o processo de checkout de um e-commerce.')">
+                                <i class="fa-solid fa-diagram-project"></i>
+                                <h4>Diagramas Mermaid.js 📊</h4>
+                                <p>Geração gráfica instantânea de fluxogramas e mapas mentais interativos.</p>
                             </div>
-                            <div class="card" onclick="document.getElementById('btn-mic').click()">
-                                <i class="fa-solid fa-microphone"></i>
-                                <h4>Entrada por Voz (Microfone)</h4>
-                                <p>Fale sua pergunta usando a voz via atalho Alt+M.</p>
+                        </div>
+
+                        <!-- Central de Templates Rápidos -->
+                        <div class="quick-templates-box mt-20">
+                            <div class="templates-label"><i class="fa-solid fa-bolt"></i> Prompts Rápidos de Alta Produtividade:</div>
+                            <div class="template-chips-container">
+                                <button class="template-chip" onclick="useTemplate('Crie uma landing page profissional completa em HTML, CSS e JS estilo dark mode.')"><i class="fa-solid fa-code"></i> Landing Page HTML/CSS</button>
+                                <button class="template-chip" onclick="useTemplate('Analise o código a seguir, encontre possíveis bugs e sugira melhorias de performance:')"><i class="fa-solid fa-bug"></i> Auditoria de Código</button>
+                                <button class="template-chip" onclick="useTemplate('Crie um resumo de estudos estruturado em tópicos e flashcards para memorização sobre:')"><i class="fa-solid fa-graduation-cap"></i> Resumo em Flashcards</button>
+                                <button class="template-chip" onclick="useTemplate('Escreva um e-mail corporativo altamente profissional e persuasivo sobre:')"><i class="fa-solid fa-envelope"></i> E-mail Profissional</button>
                             </div>
                         </div>
                     </div>
@@ -216,7 +247,7 @@
                     </button>
 
                     <!-- Textarea -->
-                    <textarea id="chat-input" placeholder="Pergunte algo, diga 'Lembre-se que...', fale por voz (Alt+M) ou ative a Equipe de IAs 🎭..." rows="1"></textarea>
+                    <textarea id="chat-input" placeholder="Pergunte algo, teste a Arena ⚔️, crie um diagrama Mermaid ou fale por voz (Alt+M)..." rows="1"></textarea>
 
                     <!-- Botão de Enviar / Parar -->
                     <button id="btn-send" class="input-action-btn send-btn" title="Enviar Mensagem">

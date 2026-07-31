@@ -1,12 +1,15 @@
 // ESTADO GLOBAL DA APLICAÇÃO
 let currentConversationId = null;
 let selectedModel = "";
+let selectedModelA = "";
+let selectedModelB = "";
 let currentSystemPrompt = "Você é um assistente virtual útil, preciso e atencioso.";
 let isStreaming = false;
 let activeAbortController = null;
 let isSpeaking = false;
 let isWebSearchEnabled = false;
 let isMultiAgentEnabled = false;
+let isArenaModeActive = false;
 let currentUtterance = null;
 let allConversations = [];
 let selectedBase64Images = [];
@@ -28,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupMarkedOptions();
     setupSpeechRecognition();
     setupKeyboardShortcuts();
+    initMermaid();
     checkOllamaStatus();
     loadAvailableModels();
     loadConversationsList();
@@ -35,6 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     loadSavedSettings();
 });
+
+function initMermaid() {
+    if (window.mermaid) {
+        mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+    }
+}
 
 function setupMarkedOptions() {
     marked.setOptions({
@@ -140,6 +150,15 @@ function stopSpeechRecognition() {
     if (micBtn) micBtn.classList.remove('recording');
 }
 
+// TEMPLATES RÁPIDOS
+function useTemplate(promptText) {
+    const input = document.getElementById('chat-input');
+    input.value = promptText;
+    input.focus();
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+}
+
 // EVENT LISTENERS
 function setupEventListeners() {
     document.getElementById('btn-new-chat').addEventListener('click', createNewChat);
@@ -157,16 +176,39 @@ function setupEventListeners() {
         updateThemeIcon(newTheme);
     });
 
+    // Toggle Arena de Modelos (Lado a Lado)
+    const arenaBtn = document.getElementById('btn-toggle-arena');
+    const singleSelector = document.getElementById('single-model-selector');
+    const arenaSelectors = document.getElementById('arena-model-selectors');
+    const multiIndicator = document.getElementById('multiagent-status-indicator');
+
+    arenaBtn.addEventListener('click', () => {
+        isArenaModeActive = !isArenaModeActive;
+        arenaBtn.classList.toggle('active', isArenaModeActive);
+        if (isArenaModeActive) {
+            singleSelector.classList.add('hidden');
+            arenaSelectors.classList.remove('hidden');
+            multiIndicator.className = 'active';
+            multiIndicator.innerHTML = '<i class="fa-solid fa-swords"></i> ⚔️ Arena de Comparação Lado a Lado Ativada';
+        } else {
+            singleSelector.classList.remove('hidden');
+            arenaSelectors.classList.add('hidden');
+            if (!isMultiAgentEnabled && !isWebSearchEnabled) {
+                multiIndicator.className = 'text-muted';
+                multiIndicator.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado';
+            }
+        }
+    });
+
     // Toggle Modo Equipe de IAs (Multi-Agent)
     const multiBtn = document.getElementById('btn-toggle-multiagent');
-    const multiIndicator = document.getElementById('multiagent-status-indicator');
     multiBtn.addEventListener('click', () => {
         isMultiAgentEnabled = !isMultiAgentEnabled;
         multiBtn.classList.toggle('active', isMultiAgentEnabled);
         if (isMultiAgentEnabled) {
             multiIndicator.className = 'active';
             multiIndicator.innerHTML = '<i class="fa-solid fa-users-gear"></i> 🎭 Modo Equipe de IAs Ativado (Pesquisa ➔ Criação ➔ Revisão)';
-        } else {
+        } else if (!isArenaModeActive && !isWebSearchEnabled) {
             multiIndicator.className = 'text-muted';
             multiIndicator.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado';
         }
@@ -180,7 +222,7 @@ function setupEventListeners() {
         if (isWebSearchEnabled) {
             multiIndicator.className = 'active';
             multiIndicator.innerHTML = '<i class="fa-solid fa-globe"></i> 🌐 Live Web Scraper Ativado (Tempo Real)';
-        } else if (!isMultiAgentEnabled) {
+        } else if (!isMultiAgentEnabled && !isArenaModeActive) {
             multiIndicator.className = 'text-muted';
             multiIndicator.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Modo 100% Offline e Privado';
         }
@@ -201,6 +243,14 @@ function setupEventListeners() {
         if (currentConversationId) {
             updateConversationMeta({ model: selectedModel });
         }
+    });
+
+    document.getElementById('select-model-a').addEventListener('change', (e) => {
+        selectedModelA = e.target.value;
+    });
+
+    document.getElementById('select-model-b').addEventListener('change', (e) => {
+        selectedModelB = e.target.value;
     });
 
     // Botão de Microfone
@@ -269,7 +319,7 @@ function setupEventListeners() {
     document.getElementById('btn-refresh-status').addEventListener('click', checkOllamaStatus);
 }
 
-// MEMÓRIA DE LONGO PRAZO (v5.0)
+// MEMÓRIA DE LONGO PRAZO
 async function loadMemoriesCount() {
     try {
         const res = await fetch('/api/memories');
@@ -323,7 +373,6 @@ async function renderMemoriesList() {
 async function saveNewMemory() {
     const keyInput = document.getElementById('new-mem-key');
     const valInput = document.getElementById('new-mem-val');
-
     const key = keyInput.value.trim();
     const val = valInput.value.trim();
     if (!key || !val) {
@@ -510,27 +559,41 @@ async function checkOllamaStatus() {
     }
 }
 
-// MODELOS
+// MODELOS & ARENA SELECTORS
 async function loadAvailableModels() {
     const select = document.getElementById('select-model');
+    const selectA = document.getElementById('select-model-a');
+    const selectB = document.getElementById('select-model-b');
+
     try {
         const res = await fetch('/api/models');
         const data = await res.json();
+
         select.innerHTML = '';
+        selectA.innerHTML = '';
+        selectB.innerHTML = '';
 
         if (data.models && data.models.length > 0) {
-            data.models.forEach(modelName => {
+            data.models.forEach((modelName, idx) => {
                 const opt = document.createElement('option');
                 opt.value = modelName;
                 opt.innerText = modelName;
                 select.appendChild(opt);
+
+                const optA = opt.cloneNode(true);
+                const optB = opt.cloneNode(true);
+                selectA.appendChild(optA);
+                selectB.appendChild(optB);
             });
+
             selectedModel = data.models[0];
+            selectedModelA = data.models[0];
+            selectedModelB = data.models.length > 1 ? data.models[1] : data.models[0];
+
+            selectA.value = selectedModelA;
+            selectB.value = selectedModelB;
         } else {
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.innerText = 'Nenhum modelo baixado';
-            select.appendChild(opt);
+            select.innerHTML = '<option value="">Nenhum modelo baixado</option>';
         }
     } catch (err) {
         select.innerHTML = '<option value="">Erro ao carregar modelos</option>';
@@ -720,24 +783,34 @@ function renderWelcomeScreen() {
             <div class="welcome-icon">
                 <i class="fa-solid fa-robot"></i>
             </div>
-            <h1>IA Universal v5.0 (Ultra Edition)</h1>
-            <p>Diferenciador único: Modo Equipe de IAs (3 Agentes), Memória Auto-Evolutiva de Longo Prazo, Microfone 🎤 e Live Web Scraper!</p>
+            <h1>IA Universal v6.0 (Ultimate Edition)</h1>
+            <p>Arena de Comparação Lado a Lado ⚔️, Diagramas Mermaid.js 📊, Modo Equipe 🎭, Memória Auto-Evolutiva 🧠 e Microfone 🎤!</p>
             
             <div class="feature-cards">
+                <div class="card" onclick="document.getElementById('btn-toggle-arena').click()">
+                    <i class="fa-solid fa-swords"></i>
+                    <h4>Arena de Modelos Lado a Lado ⚔️</h4>
+                    <p>Compare 2 IAs ao vivo na mesma tela com métricas de velocidade paralelas.</p>
+                </div>
                 <div class="card" onclick="document.getElementById('btn-toggle-multiagent').click()">
                     <i class="fa-solid fa-users-gear"></i>
                     <h4>Modo Equipe de IAs 🎭</h4>
-                    <p>3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) colaborando para criar a resposta perfeita.</p>
+                    <p>3 Agentes Especialistas (Pesquisador ➔ Criador ➔ Revisor) em colaboração encadeada.</p>
                 </div>
-                <div class="card" onclick="document.getElementById('btn-open-memories').click()">
-                    <i class="fa-solid fa-brain"></i>
-                    <h4>Memória Auto-Evolutiva 🧠</h4>
-                    <p>A IA aprende seu perfil, regras e preferências e lembra em todas as futuras conversas.</p>
+                <div class="card" onclick="useTemplate('Crie um diagrama de fluxo Mermaid completo mostrando o processo de checkout de um e-commerce.')">
+                    <i class="fa-solid fa-diagram-project"></i>
+                    <h4>Diagramas Mermaid.js 📊</h4>
+                    <p>Geração gráfica instantânea de fluxogramas e mapas mentais interativos.</p>
                 </div>
-                <div class="card" onclick="document.getElementById('btn-mic').click()">
-                    <i class="fa-solid fa-microphone"></i>
-                    <h4>Entrada por Voz (Microfone)</h4>
-                    <p>Fale sua pergunta usando a voz via atalho Alt+M.</p>
+            </div>
+
+            <div class="quick-templates-box mt-20">
+                <div class="templates-label"><i class="fa-solid fa-bolt"></i> Prompts Rápidos de Alta Produtividade:</div>
+                <div class="template-chips-container">
+                    <button class="template-chip" onclick="useTemplate('Crie uma landing page profissional completa em HTML, CSS e JS estilo dark mode.')"><i class="fa-solid fa-code"></i> Landing Page HTML/CSS</button>
+                    <button class="template-chip" onclick="useTemplate('Analise o código a seguir, encontre possíveis bugs e sugira melhorias de performance:')"><i class="fa-solid fa-bug"></i> Auditoria de Código</button>
+                    <button class="template-chip" onclick="useTemplate('Crie um resumo de estudos estruturado em tópicos e flashcards para memorização sobre:')"><i class="fa-solid fa-graduation-cap"></i> Resumo em Flashcards</button>
+                    <button class="template-chip" onclick="useTemplate('Escreva um e-mail corporativo altamente profissional e persuasivo sobre:')"><i class="fa-solid fa-envelope"></i> E-mail Profissional</button>
                 </div>
             </div>
         </div>
@@ -885,7 +958,7 @@ async function deleteDocument(docId) {
     }
 }
 
-// MENSAGENS, STREAMING, LIVE CODE PREVIEW E VISÃO
+// MENSAGENS, STREAMING, LIVE CODE PREVIEW E DIAGRAMAS MERMAID
 function renderMessages(messages) {
     const container = document.getElementById('messages-container');
     container.innerHTML = '';
@@ -948,6 +1021,7 @@ function appendMessageUI(role, content, sources = [], metrics = null) {
 
     container.appendChild(row);
     formatCodeBlocks(row);
+    renderMermaidDiagrams(row);
     scrollToBottom();
     return row;
 }
@@ -1030,13 +1104,27 @@ async function sendMessage() {
     selectedBase64Images = [];
     renderImageChips();
 
-    const assistantRow = appendMessageUI('assistant', '');
-    const textElement = assistantRow.querySelector('.message-text');
-    textElement.classList.add('cursor-typing');
-
     isStreaming = true;
     activeAbortController = new AbortController();
     updateSendButtonUI(true);
+
+    if (isArenaModeActive) {
+        await streamArenaModels(prompt, rawImages);
+    } else {
+        await streamSingleModel(prompt, rawImages);
+    }
+
+    isStreaming = false;
+    activeAbortController = null;
+    updateSendButtonUI(false);
+    loadConversationsList();
+    loadMemoriesCount();
+}
+
+async function streamSingleModel(prompt, rawImages) {
+    const assistantRow = appendMessageUI('assistant', '');
+    const textElement = assistantRow.querySelector('.message-text');
+    textElement.classList.add('cursor-typing');
 
     let fullReply = '';
     let sources = [];
@@ -1082,6 +1170,7 @@ async function sendMessage() {
                             fullReply += payload.content;
                             textElement.innerHTML = marked.parse(fullReply);
                             formatCodeBlocks(assistantRow);
+                            renderMermaidDiagrams(assistantRow);
                             scrollToBottom();
                         } else if (payload.type === 'metrics') {
                             metrics = payload.metrics;
@@ -1094,9 +1183,7 @@ async function sendMessage() {
                             addTab(currentConversationId, payload.title);
                             loadConversationsList();
                         }
-                    } catch (e) {
-                        console.error('Erro ao ler linha SSE:', e);
-                    }
+                    } catch (e) {}
                 }
             }
         }
@@ -1110,17 +1197,127 @@ async function sendMessage() {
         }
     } finally {
         textElement.classList.remove('cursor-typing');
-        isStreaming = false;
-        activeAbortController = null;
-        updateSendButtonUI(false);
-        loadConversationsList();
-        loadMemoriesCount();
     }
+}
+
+// ARENA DE MODELOS (LADO A LADO)
+async function streamArenaModels(prompt, rawImages) {
+    const container = document.getElementById('messages-container');
+    
+    const arenaRow = document.createElement('div');
+    arenaRow.className = 'message-row assistant';
+    arenaRow.innerHTML = `
+        <div class="avatar"><i class="fa-solid fa-swords"></i></div>
+        <div class="message-bubble w-full" style="max-width: 100%;">
+            <div class="arena-grid">
+                <div class="arena-column">
+                    <div class="arena-header-badge badge-a"><i class="fa-solid fa-cube"></i> ${escapeHtml(selectedModelA)}</div>
+                    <div class="message-text text-a cursor-typing"></div>
+                    <div class="metrics-badge metrics-a">Calculando...</div>
+                </div>
+                <div class="arena-column">
+                    <div class="arena-header-badge badge-b"><i class="fa-solid fa-cube"></i> ${escapeHtml(selectedModelB)}</div>
+                    <div class="message-text text-b cursor-typing"></div>
+                    <div class="metrics-badge metrics-b">Calculando...</div>
+                </div>
+            </div>
+        </div>
+    `;
+    container.appendChild(arenaRow);
+    scrollToBottom();
+
+    const textA = arenaRow.querySelector('.text-a');
+    const textB = arenaRow.querySelector('.text-b');
+    const metricsA = arenaRow.querySelector('.metrics-a');
+    const metricsB = arenaRow.querySelector('.metrics-b');
+
+    const fetchModelStream = async (modelName, targetTextEl, targetMetricsEl) => {
+        let fullReply = '';
+        try {
+            const resp = await fetch('/api/chat/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversation_id: currentConversationId,
+                    prompt: prompt,
+                    model: modelName,
+                    system_prompt: currentSystemPrompt,
+                    web_search: isWebSearchEnabled,
+                    options: getAiOptions()
+                }),
+                signal: activeAbortController.signal
+            });
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const payload = JSON.parse(line.substring(6));
+                            if (payload.type === 'token') {
+                                fullReply += payload.content;
+                                targetTextEl.innerHTML = marked.parse(fullReply);
+                                formatCodeBlocks(arenaRow);
+                                renderMermaidDiagrams(arenaRow);
+                                scrollToBottom();
+                            } else if (payload.type === 'metrics') {
+                                const m = payload.metrics;
+                                targetMetricsEl.innerText = `⚡ ${m.tokens_per_second} t/s (${m.elapsed_seconds}s)`;
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+        } catch (e) {
+            targetTextEl.innerHTML += ' _[Cancelado]_';
+        } finally {
+            targetTextEl.classList.remove('cursor-typing');
+        }
+    };
+
+    await Promise.all([
+        fetchModelStream(selectedModelA, textA, metricsA),
+        fetchModelStream(selectedModelB, textB, metricsB)
+    ]);
+}
+
+// RENDERIZADOR DE DIAGRAMAS MERMAID.JS
+function renderMermaidDiagrams(container) {
+    if (!window.mermaid) return;
+
+    container.querySelectorAll('pre code.language-mermaid').forEach((block, idx) => {
+        const parent = block.parentElement;
+        if (parent.dataset.renderedMermaid) return;
+
+        const codeText = block.innerText.trim();
+        const mermaidDiv = document.createElement('div');
+        mermaidDiv.className = 'mermaid-container';
+        mermaidDiv.innerHTML = codeText;
+        parent.replaceWith(mermaidDiv);
+        mermaidDiv.dataset.renderedMermaid = 'true';
+
+        try {
+            mermaid.run({ nodes: [mermaidDiv] });
+        } catch (e) {
+            console.error('Erro ao renderizar diagramas Mermaid:', e);
+        }
+    });
 }
 
 // LIVE CODE PREVIEW & SINTAXE
 function formatCodeBlocks(container) {
     container.querySelectorAll('pre code').forEach((block) => {
+        if (block.classList.contains('language-mermaid')) return;
         hljs.highlightElement(block);
         
         const parent = block.parentElement;

@@ -122,7 +122,7 @@ body {
 
 .badge-offline {
     font-size: 11px;
-    color: #a855f7;
+    color: #f59e0b;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -179,12 +179,113 @@ body {
     border-color: var(--accent-primary);
 }
 
-/* MODO EQUIPE DE IAS TOP BUTTON */
-.multiagent-top-btn.active {
-    background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%) !important;
+/* ARENA DE MODELOS (v6.0) */
+.arena-top-btn.active {
+    background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%) !important;
     color: #ffffff !important;
-    border-color: rgba(236, 72, 153, 0.5) !important;
-    box-shadow: 0 0 14px rgba(168, 85, 247, 0.4);
+    border-color: rgba(245, 158, 11, 0.5) !important;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+}
+
+.arena-vs {
+    font-weight: 800;
+    font-size: 12px;
+    color: #ef4444;
+    padding: 0 4px;
+}
+
+.arena-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+}
+
+.arena-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed var(--border-color);
+    padding: 12px;
+    border-radius: 12px;
+}
+
+.arena-header-badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+}
+
+.arena-header-badge.badge-a {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.arena-header-badge.badge-b {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* CENTRAL DE TEMPLATES RÁPIDOS */
+.quick-templates-box {
+    text-align: left;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.templates-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.template-chips-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.template-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.template-chip:hover {
+    background: var(--bg-card-hover);
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+
+/* MERMAID DIAGRAMS */
+.mermaid-container {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px 0;
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
 }
 
 .w-full { width: 100%; }
@@ -1018,7 +1119,6 @@ body {
     border-radius: 6px;
     font-size: 11px;
     font-weight: 600;
-
 }
 
 /* MODAIS */
