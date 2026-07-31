@@ -1,102 +1,109 @@
-# 🧠 IA Local Gratuita 100% Offline (Chat + RAG + Ollama)
+# 🧠 IA Universal v3.0 - Plataforma de IA Local & Live Web Scraper
 
-Uma aplicação de Inteligência Artificial completa, gratuita e **100% offline** que roda diretamente no seu computador com privacidade total. Seus dados e documentos **nunca saem da sua máquina**.
+Uma plataforma moderna de Inteligência Artificial **100% Gratuita, de Código Aberto e 100% Offline** (com opção de **Live Web Scraper em Tempo Real**). 
 
----
-
-## 🌟 Funcionalidades Principais
-
-- ⚡ **Respostas em Tempo Real (Token-a-Token)**: Respostas estilo ChatGPT fluídas via SSE (Server-Sent Events).
-- 🔒 **100% Offline e Gratuito**: Sem chaves de API pagas, sem envio de dados para servidores externos.
-- 📄 **RAG para Documentos (Busca Semântica)**: Faça upload de arquivos `.pdf`, `.txt`, `.md` ou `.docx` e converse diretamente sobre o conteúdo deles.
-- 🗃️ **Histórico Local em SQLite**: Crie, altere a persona, renomeie e exclua conversas salvos automaticamente.
-- 🤖 **Seletor de Modelos Dinâmico**: Detecta automaticamente os modelos instalados no seu Ollama (ex: `llama3.2`, `qwen2.5`, `deepseek-r1`, `mistral`, `phi4`).
-- 🎨 **Interface Web Moderna Premium**: Design Glassmorphism, temas Dark/Light, formatação Markdown e destaque de sintaxe em código com botão de copiar.
-- 🎭 **Personas & System Prompts Customizáveis**: Escolha perfis prontos (Assistente Geral, Especialista em Código, Analista de Documentos) ou crie suas próprias instruções.
+Desenvolvida em **Python (FastAPI)** com interface web estilo Glassmorphism, busca semântica em documentos (RAG), suporte à visão por imagem, pré-visualização de código ao vivo e empacotada em um **arquivo executável `.exe` único e portátil para Windows**.
 
 ---
 
-## 🚀 Como Instalar e Rodar
+## 🌟 Principais Recursos
 
-### Passo 1: Instalar o Ollama (Motor de IA Local)
+- 📦 **Executável Único Portátil (`IALocal.exe`)**: Empacotado em um único arquivo sem pastas externas. Não requer Python instalado no computador de destino.
+- 🌐 **Live Web Scraper em Tempo Real**: Quando ativado, a IA busca na internet, abre assincronamente as páginas dos 3 melhores resultados, extrai o conteúdo atualizado e responde com citações e links clicáveis.
+- 👁️ **Análise de Imagens (Visão Multimodal)**: Suporte a upload e análise de fotos (`.png`, `.jpg`, `.webp`) para descrever imagens ou extrair códigos usando modelos como `llava` e `llama3.2-vision`.
+- 👁️ **Live Code Preview (Execução ao Vivo)**: Visualizador interativo integrado! Ao solicitar códigos em HTML5, CSS3 ou JavaScript, a IA exibe o botão **"👁️ Ver Preview"** para você testar a página web ao vivo no próprio aplicativo.
+- ⚙️ **Painel de Hiperparâmetros da IA**: Ajuste dinâmico de **Temperatura** (Criatividade vs Precisão), **Janela de Contexto (`num_ctx` de 2048 a 16384 tokens)** e **Top-P**.
+- 📄 **RAG em Documentos Locais**: Envie arquivos PDF, TXT ou DOCX para realizar pesquisas semânticas baseadas no seu próprio acervo de documentos.
+- 🔔 **Bandeja do Sistema Windows (System Tray)**: Exibe um ícone permanente ao lado do relógio do Windows com menu interativo para abrir o navegador ou encerrar o app.
+- 🛑 **Botão Parar Resposta**: Interrompa a geração da IA em tempo real a qualquer momento via `AbortController`.
+- ⚡ **Métricas de Desempenho**: Exibição de velocidade em tempo real (Tokens por Segundo `t/s`, tempo decorrido e total de tokens).
+- 🔊 **Leitor por Voz (Text-to-Speech)**: Botão integrado para ouvir as respostas da IA narradas em Português.
+- 📤 **Exportação Multiformato**: Baixe o histórico de conversas em **PDF**, **Markdown (.md)** ou **JSON**.
 
-1. Baixe e instale o Ollama gratuitamente no site oficial: **[https://ollama.com](https://ollama.com)**
-2. Abra o terminal (CMD ou PowerShell) e baixe um ou mais modelos de sua preferência. Sugestões de modelos leves e potentes:
+---
+
+## 📁 Estrutura do Projeto
+
+```text
+├── launcher.py         # Inicializador silencioso com suporte ao System Tray do Windows
+├── main.py             # Servidor web FastAPI com streaming SSE e suporte a Visão/RAG
+├── web_search.py       # Módulo de busca na web e Live Web Scraper de páginas
+├── database.py         # Camada de persistência local SQLite (local_ai.db)
+├── rag_engine.py       # Leitor de PDF/TXT/DOCX e busca semântica por similaridade
+├── build_exe.py        # Script de compilação PyInstaller para gerar executável único
+├── build.bat           # Script batch para compilar o dist/IALocal.exe com 1 clique
+├── run.bat / run.ps1   # Scripts de execução rápida em ambiente de desenvolvimento
+├── requirements.txt    # Dependências do projeto Python
+└── static/
+    ├── index.html      # Interface Web Glassmorphism (HTML5)
+    ├── styles.css      # Design System, temas Dark/Light e responsividade (CSS3)
+    └── app.js          # Lógica da aplicação, streaming SSE, voz e Live Code Preview (JS ES6)
+```
+
+---
+
+## 🚀 Como Executar
+
+### Opção 1: Usando o Executável `.exe` Portátil (Recomendado para Usuários)
+
+1. Baixe o arquivo **`dist/IALocal.exe`**.
+2. Dê dois cliques em **`IALocal.exe`**.
+3. O servidor será iniciado em segundo plano, o ícone reaparecerá na bandeja do Windows (próximo ao relógio) e o seu navegador padrão abrirá automaticamente em `http://localhost:8000`.
+
+### Opção 2: Rodando pelo Código-Fonte (Para Desenvolvedores)
+
+1. **Clonar o Repositório**:
    ```bash
-   # Modelo leve e muito rápido (Meta Llama 3.2 3B)
-   ollama pull llama3.2
-
-   # Modelo excelente em Português e Código (Qwen 2.5 7B ou 3B)
-   ollama pull qwen2.5
-
-   # Modelo de Raciocínio Avançado
-   ollama pull deepseek-r1:1.5b
+   git clone https://github.com/wMyster/IA-Local.git
+   cd IA-Local
    ```
 
----
-
-### Passo 2: Iniciar a Aplicação
-
-#### Opção A: No Windows (1-Click Startup)
-Basta dar dois cliques no arquivo **`run.bat`** (ou executar **`.\run.ps1`** no PowerShell).
-
-O script irá:
-1. Criar o ambiente virtual Python (`.venv`) automaticamente.
-2. Instalar todas as dependências do `requirements.txt`.
-3. Verificar a conexão com o serviço Ollama.
-4. Iniciar o servidor e abrir **`http://localhost:8000`** no seu navegador padrão.
-
----
-
-#### Opção B: Inicialização Manual (Qualquer Sistema Operacional)
-
-1. **Criar e ativar ambiente virtual Python**:
+2. **Criar e Ativar Ambiente Virtual**:
    ```bash
    python -m venv .venv
-   
-   # No Windows (CMD / PowerShell):
-   .venv\Scripts\activate
-   
-   # No Linux / macOS:
-   source .venv/bin/activate
+   # No Windows:
+   .\.venv\Scripts\activate
    ```
 
-2. **Instalar dependências**:
+3. **Instalar Dependências**:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Iniciar o Servidor FastAPI**:
+4. **Executar a Aplicação**:
    ```bash
-   python -m uvicorn main:app --reload --port 8000
+   python launcher.py
+   # Ou clique duas vezes no arquivo run.bat
    ```
 
-4. Acesse no seu navegador: **`http://localhost:8000`**
+---
+
+## 🤖 Modelos Recomendados (Via Ollama)
+
+Você pode baixar qualquer modelo diretamente pelo **Gerenciador de Modelos** da interface Web:
+
+| Modelo | Tamanho | Recomendação |
+| :--- | :--- | :--- |
+| `qwen2.5:3b` | 1.9 GB | Modelo ultra-rápido e preciso para programação e conversação. |
+| `llama3.2:3b` | 2.0 GB | Excelente para raciocínio geral e tarefas do dia a dia. |
+| `deepseek-r1:7b` | 4.7 GB | Raciocínio lógico avançado e resolução de problemas complexos. |
+| `gemma2:2b` | 1.6 GB | Leve, super veloz para CPUs simples. |
+| `llava:7b` | 4.5 GB | **Visão Multimodal**: Análise de imagens, fotos e prints. |
 
 ---
 
-## 💻 Estrutura do Projeto
+## ⚙️ Compilando seu Próprio `.EXE` Único
 
+Para compilar um novo arquivo `.exe` autônomo após realizar modificações no código:
+
+```bash
+python build_exe.py
+# Ou execute o arquivo build.bat
 ```
-.
-├── main.py              # Servidor FastAPI com streaming SSE e rotas da API
-├── database.py          # Gerenciamento do banco de dados SQLite local (local_ai.db)
-├── rag_engine.py        # Extração de texto de PDF/DOCX, chunking e TF-IDF RAG
-├── requirements.txt     # Dependências Python (fastapi, uvicorn, pypdf, etc.)
-├── run.bat              # Script de inicialização automática (CMD Windows)
-├── run.ps1              # Script de inicialização automática (PowerShell)
-├── README.md            # Documentação do projeto
-└── static/
-    ├── index.html       # Interface Web HTML5 moderna
-    ├── styles.css       # Design System Glassmorphism com temas Dark/Light
-    └── app.js           # Lógica JavaScript (Stream SSE, Markdown, RAG e UI)
-```
+O executável final será gerado na pasta `dist/IALocal.exe`.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 📄 Licença
 
-- **Backend**: Python 3, FastAPI, Uvicorn, SQLite.
-- **RAG & NLP**: PyPDF, python-docx, Scikit-learn (TF-IDF & Cosine Similarity).
-- **Inference Engine**: Ollama API REST (`http://localhost:11434`).
-- **Frontend**: HTML5, Vanilla CSS3 (Glassmorphism), JavaScript ES6, Marked.js, Highlight.js, FontAwesome.
+Este projeto é de código aberto sob a licença **MIT**. Sinta-se livre para usar, modificar e distribuir gratuitamente!
